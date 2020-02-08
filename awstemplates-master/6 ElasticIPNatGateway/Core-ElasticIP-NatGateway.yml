@@ -1,0 +1,388 @@
+#------------------------------------------------------------------------------------#
+## Copyright © Genpact 2018. All Rights Reserved.                                   ##
+## Ltd trading as G in NYSE - Registered in US.                                     ##
+## Registered Office - Canon's Court, 22 Victoria Street HAMILTON, HM 12, Bermuda.  ##
+#------------------------------------------------------------------------------------#
+## Author = 'Vivek Trivedi (Genpact Limited)'                                       ##
+## Version = '1.0.0'                                                                ##
+## Date = 6-Apr-2018                                                                ##
+#------------------------------------------------------------------------------------#
+AWSTemplateFormatVersion: 2010-09-09
+Description: CORE Elastic IP and NAT Gateway Association.
+Parameters:
+    Region: 
+        Description: AWS Region
+        Default: N-Virginia(us-east-1)
+        Type: String
+        AllowedValues: 
+           - N-Virginia(us-east-1)
+           - Ireland(eu-west-1)
+        ConstraintDescription: Select the Region for creation.
+    EnvType: 
+        Description: Environment Type
+        Default: DEV/ML
+        Type: String
+        AllowedValues: 
+           - DEV/ML
+           - SIT
+           - VAL/PROD
+           - UserTraining
+           - PerformanceTesting
+        ConstraintDescription: Select the Environment for Creation.
+Conditions: 
+  CreateCondition1A: !And
+        - !Equals [ !Ref EnvType, DEV/ML ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition2A: !And
+        - !Equals [ !Ref EnvType, SIT ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition0A: !And
+        - !Equals [ !Ref EnvType, VAL/PROD ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition0B: !And
+        - !Equals [ !Ref Region, Ireland(eu-west-1) ]
+        - !Equals [ !Ref EnvType, VAL/PROD ]
+  CreateCondition3A: !And
+        - !Equals [ !Ref EnvType, UserTraining ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition4A: !And
+        - !Equals [ !Ref EnvType, PerformanceTesting ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+Resources:
+  eip21A:
+    Condition: CreateCondition1A
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  eip22A:
+    Condition: CreateCondition2A
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  eip20Ax:
+    Condition: CreateCondition0A
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  eip20Ay:
+    Condition: CreateCondition0A
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  eip20Bx:
+    Condition: CreateCondition0B
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  eip20By:
+    Condition: CreateCondition0B
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  eip23A:
+    Condition: CreateCondition3A
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  eip24A:
+    Condition: CreateCondition4A
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  eip31A:
+    Condition: CreateCondition1A
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  eip32A:
+    Condition: CreateCondition2A
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  eip30Ax:
+    Condition: CreateCondition0A
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  eip30Ay:
+    Condition: CreateCondition0A
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  eip30Bx:
+    Condition: CreateCondition0B
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  eip30By:
+    Condition: CreateCondition0B
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  eip33A:
+    Condition: CreateCondition3A
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  eip34A:
+    Condition: CreateCondition4A
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+
+  natgatewayvpc21A:
+    Type: 'AWS::EC2::NatGateway'
+    Condition: CreateCondition1A
+    Properties:
+      AllocationId: !GetAtt 'eip21A.AllocationId'
+      SubnetId: !ImportValue subnet21a1A
+      Tags:
+      - Key: Name
+        Value: natgatewayvpc21A      
+
+  natgatewayvpc22A:
+    Type: 'AWS::EC2::NatGateway'
+    Condition: CreateCondition2A
+    Properties:
+      AllocationId: !GetAtt 'eip22A.AllocationId'
+      SubnetId: !ImportValue subnet21a2A
+      Tags:
+      - Key: Name
+        Value: natgatewayvpc22A
+        
+  natgatewayvpc20Ax:
+    Type: 'AWS::EC2::NatGateway'
+    Condition: CreateCondition0A
+    Properties:
+      AllocationId: !GetAtt 'eip20Ax.AllocationId'
+      SubnetId: !ImportValue subnet21a0A
+      Tags:
+      - Key: Name
+        Value: natgatewayvpc20Ax  
+    
+  natgatewayvpc20Ay:
+    Type: 'AWS::EC2::NatGateway'
+    Condition: CreateCondition0A
+    Properties:
+      AllocationId: !GetAtt 'eip20Ay.AllocationId'
+      SubnetId: !ImportValue subnet22a0A
+      Tags:
+      - Key: Name
+        Value: natgatewayvpc20Ay
+
+  natgatewayvpc20Bx:
+    Type: 'AWS::EC2::NatGateway'
+    Condition: CreateCondition0B
+    Properties:
+      AllocationId: !GetAtt 'eip20Bx.AllocationId'
+      SubnetId: !ImportValue subnet21a0B
+      Tags:
+      - Key: Name
+        Value: natgatewayvpc20Bx
+
+  natgatewayvpc20By:
+    Type: 'AWS::EC2::NatGateway'
+    Condition: CreateCondition0B
+    Properties:
+      AllocationId: !GetAtt 'eip20By.AllocationId'
+      SubnetId: !ImportValue subnet22a0B
+      Tags:
+      - Key: Name
+        Value: natgatewayvpc20By
+
+  natgatewayvpc23A:
+    Type: 'AWS::EC2::NatGateway'
+    Condition: CreateCondition3A
+    Properties:
+      AllocationId: !GetAtt 'eip23A.AllocationId'
+      SubnetId: !ImportValue subnet21a3A
+      Tags:
+      - Key: Name
+        Value: natgatewayvpc23A
+
+  natgatewayvpc24A:
+    Type: 'AWS::EC2::NatGateway'
+    Condition: CreateCondition4A
+    Properties:
+      AllocationId: !GetAtt 'eip24A.AllocationId'
+      SubnetId: !ImportValue subnet21a4A
+      Tags:
+      - Key: Name
+        Value: natgatewayvpc24A
+
+  natgatewayvpc31A:
+    Type: 'AWS::EC2::NatGateway'
+    Condition: CreateCondition1A
+    Properties:
+      AllocationId: !GetAtt 'eip31A.AllocationId'
+      SubnetId: !ImportValue subnet31a1A
+      Tags:
+      - Key: Name
+        Value: natgatewayvpc31A
+
+  natgatewayvpc32A:
+    Type: 'AWS::EC2::NatGateway'
+    Condition: CreateCondition2A
+    Properties:
+      AllocationId: !GetAtt 'eip32A.AllocationId'
+      SubnetId: !ImportValue subnet31a2A   
+      Tags:
+      - Key: Name
+        Value: natgatewayvpc32A
+     
+  natgatewayvpc30Ax:
+    Type: 'AWS::EC2::NatGateway'
+    Condition: CreateCondition0A
+    Properties:
+      AllocationId: !GetAtt 'eip30Ax.AllocationId'
+      SubnetId: !ImportValue subnet31a0A
+      Tags:
+      - Key: Name
+        Value: natgatewayvpc30Ax
+
+  natgatewayvpc30Ay:
+    Type: 'AWS::EC2::NatGateway'
+    Condition: CreateCondition0A
+    Properties:
+      AllocationId: !GetAtt 'eip30Ay.AllocationId'
+      SubnetId: !ImportValue subnet32a0A
+      Tags:
+      - Key: Name
+        Value: natgatewayvpc30Ay
+
+  natgatewayvpc30Bx:
+    Type: 'AWS::EC2::NatGateway'
+    Condition: CreateCondition0B
+    Properties:
+      AllocationId: !GetAtt 'eip30Bx.AllocationId'
+      SubnetId: !ImportValue subnet31a0B
+      Tags:
+      - Key: Name
+        Value: natgatewayvpc30Bx
+        
+  natgatewayvpc30By:
+    Type: 'AWS::EC2::NatGateway'
+    Condition: CreateCondition0B
+    Properties:
+      AllocationId: !GetAtt 'eip30By.AllocationId'
+      SubnetId: !ImportValue subnet32a0B
+      Tags:
+      - Key: Name
+        Value: natgatewayvpc30By
+
+  natgatewayvpc33A: 
+    Type: 'AWS::EC2::NatGateway'
+    Condition: CreateCondition3A
+    Properties:
+      AllocationId: !GetAtt 'eip33A.AllocationId'
+      SubnetId: !ImportValue subnet31a3A
+      Tags:
+      - Key: Name
+        Value: natgatewayvpc33A
+
+  natgatewayvpc34A:
+    Type: 'AWS::EC2::NatGateway'
+    Condition: CreateCondition4A
+    Properties:
+      AllocationId: !GetAtt 'eip34A.AllocationId'
+      SubnetId: !ImportValue subnet31a4A
+      Tags:
+      - Key: Name
+        Value: natgatewayvpc34A
+Outputs:
+  natgatewayvpc21A:
+    Description: NAT Gateway for VPC-2 DEV & ML in Virginia
+    Condition: CreateCondition1A
+    Value: !Ref natgatewayvpc21A
+    Export:
+      Name: natgatewayvpc21A
+  natgatewayvpc22A:
+    Description: NAT Gateway for VPC-2 SIT in Virginia
+    Condition: CreateCondition2A
+    Value: !Ref natgatewayvpc22A
+    Export:
+      Name: natgatewayvpc22A
+  natgatewayvpc20Ax:
+    Description: NAT Gateway-x for VPC-2 VAL & PROD in Virginia
+    Condition: CreateCondition0A
+    Value: !Ref natgatewayvpc20Ax
+    Export:
+      Name: natgatewayvpc20Ax
+  natgatewayvpc20Ay:
+    Description: NAT Gateway-y for VPC-2 VAL & PROD in Virginia
+    Condition: CreateCondition0A
+    Value: !Ref natgatewayvpc20Ay
+    Export:
+      Name: natgatewayvpc20Ay
+  natgatewayvpc20Bx:
+    Description: NAT Gateway-x for VPC-2 VAL & PROD in Ireland
+    Condition: CreateCondition0B
+    Value: !Ref natgatewayvpc20Bx
+    Export:
+      Name: natgatewayvpc20Bx
+  natgatewayvpc20By:
+    Description: NAT Gateway-y for VPC-2 VAL & PROD in Ireland 
+    Condition: CreateCondition0B
+    Value: !Ref natgatewayvpc20By
+    Export:
+      Name: natgatewayvpc20By
+  natgatewayvpc23A:
+    Description: NAT Gateway for VPC-2 UserTraining in Virginia
+    Condition: CreateCondition3A
+    Value: !Ref natgatewayvpc23A
+    Export:
+      Name: natgatewayvpc23A
+  natgatewayvpc24A:
+    Description: NAT Gateway for VPC-2 PerformanceTesting in Virginia
+    Condition: CreateCondition4A
+    Value: !Ref natgatewayvpc24A
+    Export:
+      Name: natgatewayvpc24A
+  natgatewayvpc31A:
+    Description: NAT Gateway for VPC-3 DEV & ML in Virginia
+    Condition: CreateCondition1A
+    Value: !Ref natgatewayvpc31A
+    Export:
+      Name: natgatewayvpc31A
+  natgatewayvpc32A:
+    Description: NAT Gateway for VPC-3 SIT in Virginia
+    Condition: CreateCondition2A
+    Value: !Ref natgatewayvpc32A
+    Export:
+      Name: natgatewayvpc32A
+  natgatewayvpc30Ax:
+    Description: NAT Gateway-x for VPC-3 VAL & PROD in Virginia 
+    Condition: CreateCondition0A
+    Value: !Ref natgatewayvpc30Ax
+    Export:
+      Name: natgatewayvpc30Ax
+  natgatewayvpc30Ay:
+    Description: NAT Gateway-y for VPC-3 VAL & PROD in Virginia
+    Condition: CreateCondition0A
+    Value: !Ref natgatewayvpc30Ay
+    Export:
+      Name: natgatewayvpc30Ay
+  natgatewayvpc30Bx:
+    Description: NAT Gateway-x for VPC-3 VAL & PROD in Ireland
+    Condition: CreateCondition0B
+    Value: !Ref natgatewayvpc30Bx
+    Export:
+      Name: natgatewayvpc30Bx
+  natgatewayvpc30By:
+    Description: NAT Gateway-y for VPC-3 VAL & PROD in Ireland
+    Condition: CreateCondition0B
+    Value: !Ref natgatewayvpc30By
+    Export:
+      Name: natgatewayvpc30By
+  natgatewayvpc33A:
+    Description: NAT Gateway for VPC-3 UserTraining in Virginia
+    Condition: CreateCondition3A
+    Value: !Ref natgatewayvpc33A
+    Export:
+      Name: natgatewayvpc33A
+  natgatewayvpc34A:
+    Description: NAT Gateway for VPC-3 PerformanceTesting in Virginia
+    Condition: CreateCondition4A
+    Value: !Ref natgatewayvpc34A
+    Export:
+      Name: natgatewayvpc34A

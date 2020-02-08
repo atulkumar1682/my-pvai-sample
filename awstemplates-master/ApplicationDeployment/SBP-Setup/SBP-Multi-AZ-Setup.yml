@@ -1,0 +1,517 @@
+---
+# -------------------------------------------------------------------------------------------------
+#
+#     Copyright © Genpact 2018. All Rights Reserved.
+#     Ltd trading as G in NYSE - Registered in US.
+#     Registered Office - Canon's Court, 22 Victoria Street HAMILTON, HM 12, Bermuda.
+#
+# -------------------------------------------------------------------------------------------------
+## author = 'Sandeep Kumar (Genpact Limited)'
+## ver = '1.0.0'
+## date = 30-Apr-2019
+# -------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------
+## modified_by = 'Sandeep Kumar (Genpact Limited)'
+## ver = '1.0.1'
+## changes = "Base AMI to be used instead of encrypted one and encryption on the fly for the volumes"
+##           "Addition of filebeat.yml"
+## date = 19-Jul-2019
+# -------------------------------------------------------------------------------------------------
+
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create SBP Application resources ELB, ASG & LC etc
+
+Parameters:
+    Prefix:
+        Description: Prefix Value
+        Default: pvai
+        Type: String
+    Account:
+        Description: Account Name
+        Default: verification
+        Type: String
+    Region:
+        Description: AWS Region
+        Default: Primary
+        Type: String
+        AllowedValues:
+           - Primary
+           - Secondary
+        ConstraintDescription: Select the AWS Region.
+    EnvType:
+        Description: Environment Type
+        Default: prod
+        Type: String
+        AllowedValues: [ dev, ml, pt, ut, sit, val, prod ]
+        ConstraintDescription: Select the Environment for Creation.
+    AMI:
+        Description: AMI for EC2 Instance
+        Default: ami-780a1107
+        Type: String        
+    InstanceType:
+        Description: Instance Type
+        Default: m4.xlarge
+        Type: String
+        AllowedValues: [ m4.xlarge, m4.2xlarge, m4.4xlarge, m5.xlarge, m5.2xlarge, m5.4xlarge]
+        ConstraintDescription: Select the Instance Type for EC2.
+    RootVolumeSize:
+        Description: Root volume size.
+        Type: String
+        Default: "100"
+    KeyName:
+        Description: Name of an existing EC2 KeyPair to enable SSH access to the instance.
+        Type: 'AWS::EC2::KeyPair::KeyName'
+        Default: pvai-verification-prod
+    EC2KmsKeyId:
+        Description: KMS Key for EC2 Volume and EFS Encryption 
+        Default: "591fd75e-5b4f-4208-8b0d-199eadfa55f9"
+        Type: String
+    S3Bucket:
+        Description: S3 Bucket for Package / Config files location 
+        Default: "pvai-verification-deployment"
+        Type: String
+    # Major and Minor releases
+    MajorRelease:
+      Description: Major version of the Product
+      Type: String
+      Default: "intake-1.0"
+    MinorRelease:
+      Description: Minor version of the application
+      Type: String
+      Default: "102C"
+    BuildNumber:
+      Description: BuildNumber of Core-App application
+      Type: String
+      Default: "285"
+    PerformanceMode:
+        Description: The performance mode of the file system 
+        Default: "generalPurpose"
+        Type: String
+        AllowedValues: [ generalPurpose, maxIO]
+    InstanceProfile:
+        Description: Instance Role
+        Default: EC2-S3-AccessRole
+        Type: String
+    DesiredCapacity:
+       Description: EC2 Instance Desired for Application
+       Type: Number
+       Default: 1
+       ConstraintDescription: 'Must be in the range [1-10]'
+       MinValue: 1
+       MaxValue: 4
+    MountPoint:
+      Description: The Linux mount point for the EFS volume
+      Type: String
+      MinLength: '1'
+      Default: /var/lib/sparkbeyond/predbox/models 
+# short name of application like rge for Rage Framework
+    App:
+       Description: Application Short Name
+       Type: String
+       Default: sbp
+    AppPort:
+       Description: Port being used to hit the Application
+       Type: String
+       Default: 80
+       AllowedPattern: ^[0-9/]*$
+    Version:
+       Description: Version
+       Type: String
+       Default: "1.16"
+    CIDR:
+       Description: IP range for the security group
+       Type: String
+       MinLength: '9'
+       MaxLength: '18'
+       Default: 10.0.0.0/8
+       AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+       ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    HostedZoneResource:
+       Description: Private DNS
+       Type: String
+       Default: local.
+    
+# Create condition based on the Application selected;
+# Condition will be used in 'AWS::CloudFormation::Init' for LaunchConfiguration
+Conditions:
+  # Create condition based on the Environment selected;
+  # To fetch the VPC and Subnet values based on the condition
+  GetDevNetworkValues: !And
+       - !Equals [ !Ref EnvType, "dev" ]
+       - !Equals [ !Ref Region, Primary ]
+  GetMLNetworkValues: !And
+       - !Equals [ !Ref EnvType, "ml"]
+       - !Equals [ !Ref Region, Primary ]
+  GetPTNetworkValues: !And
+       - !Equals [ !Ref EnvType, "pt"]
+       - !Equals [ !Ref Region, Primary ]
+  GetUTNetworkValues: !And
+       - !Equals [ !Ref EnvType, "ut"]
+       - !Equals [ !Ref Region, Primary ]
+  GetSITNetworkValues: !And
+       - !Equals [ !Ref EnvType, "sit"]
+       - !Equals [ !Ref Region, Primary ]
+  GetValNetworkValues: !And
+       - !Equals [ !Ref EnvType, "val"]
+       - !Equals [ !Ref Region, Primary ]
+  GetProdNetworkValues: !And
+       - !Equals [ !Ref EnvType, "prod"]
+       - !Equals [ !Ref Region, Primary ]
+  GetProdNetworkValuesSecondary: !And
+       - !Equals [ !Ref EnvType, "prod"]
+       - !Equals [ !Ref Region, Secondary ]
+  GetValNetworkValuesSecondary: !And
+       - !Equals [ !Ref EnvType, "val"]
+       - !Equals [ !Ref Region, Secondary ]
+
+Resources:
+  sg:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Security Group for Communication to EC2 Instance
+      GroupName: !Sub ${Prefix}-${EnvType}-${App}
+      # Fetch the VPC based on the condition as per Environment selected
+      VpcId: !If [GetValNetworkValues, !ImportValue vpc30A, !If [GetProdNetworkValues, !ImportValue vpc30A, !If [GetDevNetworkValues, !ImportValue vpc31A, !If [GetMLNetworkValues, !ImportValue vpc31A, !If [GetPTNetworkValues, !ImportValue vpc34A, !If [GetUTNetworkValues, !ImportValue vpc33A, !If [GetSITNetworkValues, !ImportValue vpc32A, !If [GetProdNetworkValuesSecondary,!ImportValue vpc30B, !If [GetValNetworkValuesSecondary, !ImportValue vpc30B, ""]]]]]]]]]
+      SecurityGroupIngress:
+      - IpProtocol: '-1'
+        CidrIp: !Ref CIDR
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp:
+          Ref: CIDR
+      - IpProtocol: tcp
+        FromPort: !Ref AppPort
+        ToPort: !Ref AppPort
+        CidrIp:
+          Ref: CIDR
+      Tags:
+        - Key: Name
+          Value: !Sub ${Prefix}-${EnvType}-${App}
+
+  MountTargetSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${Prefix}-${EnvType}-${App}-efs
+      VpcId: !If [GetValNetworkValues, !ImportValue vpc30A, !If [GetProdNetworkValues, !ImportValue vpc30A, !If [GetDevNetworkValues, !ImportValue vpc31A, !If [GetMLNetworkValues, !ImportValue vpc31A, !If [GetPTNetworkValues, !ImportValue vpc34A, !If [GetUTNetworkValues, !ImportValue vpc33A, !If [GetSITNetworkValues, !ImportValue vpc32A, !If [GetProdNetworkValuesSecondary,!ImportValue vpc30B, !If [GetValNetworkValuesSecondary, !ImportValue vpc30B, ""]]]]]]]]]
+      GroupDescription: Security group for mount target
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '2049'
+        ToPort: '2049'
+        CidrIp: !Ref CIDR
+  FileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      PerformanceMode: !Ref PerformanceMode
+      Encrypted: true
+      KmsKeyId: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${EC2KmsKeyId}"
+      FileSystemTags:
+      - Key: Name
+        Value: !Sub "${Prefix}-${EnvType}-${App}-efs"
+      - Key: Environment
+        Value: !Ref EnvType
+  MountTargetAZ1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: FileSystem
+      SubnetId: !If [GetValNetworkValues, !ImportValue subnet33b0A, !If [GetProdNetworkValues, !ImportValue subnet34b0A, !If [GetDevNetworkValues, !ImportValue subnet33b1A, !If [GetMLNetworkValues, !ImportValue subnet34b1A, !If [GetPTNetworkValues, !ImportValue subnet33b4A, !If [GetUTNetworkValues, !ImportValue subnet33b3A, !If [GetSITNetworkValues, !ImportValue subnet33b2A, !If [GetProdNetworkValuesSecondary,!ImportValue subnet34b0B, !If [GetValNetworkValuesSecondary, !ImportValue subnet33b0B, ""]]]]]]]]]
+      SecurityGroups:
+      - Ref: MountTargetSecurityGroup
+      
+  MountTargetAZ2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: FileSystem
+      SubnetId: !If [GetValNetworkValues, !ImportValue subnet37b0A, !If [GetProdNetworkValues, !ImportValue subnet38b0A, !If [GetDevNetworkValues, !ImportValue subnet37b1A, !If [GetMLNetworkValues, !ImportValue subnet38b1A, !If [GetPTNetworkValues, !ImportValue subnet35b4A, !If [GetUTNetworkValues, !ImportValue subnet35b3A, !If [GetSITNetworkValues, !ImportValue subnet35b2A, !If [GetProdNetworkValuesSecondary,!ImportValue subnet38b0B, !If [GetValNetworkValuesSecondary, !ImportValue subnet37b0B, ""]]]]]]]]]
+      SecurityGroups:
+      - Ref: MountTargetSecurityGroup
+
+  launchconfig:
+    Type: 'AWS::AutoScaling::LaunchConfiguration'
+    Metadata:
+      'AWS::CloudFormation::Init':
+        configSets:
+          MountConfig:
+            - install_base
+            - efs_setup
+            - efs_mount
+            - download_files
+        install_base:
+            packages:
+                yum: 
+                # Example packages:
+                    bash-completion: []
+                    wget: []
+                    nfs-utils: []
+            files:
+                # These files are needed for CloudFormation::Init to work
+                /etc/cfn/cfn-hup.conf:
+                    content: !Sub |
+                        [main]
+                        stack=${AWS::StackId}
+                        region=${AWS::Region}
+                        interval=1
+                /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+                    content: !Sub |
+                        [cfn-auto-reloader-hook]
+                        triggers=post.update
+                        path=Resources.Server.Metadata.AWS::CloudFormation::Init
+                        action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource launchconfig --region ${AWS::Region}
+                        runas=root
+            services:
+                sysvinit:
+                    cfn-hup:
+                        enabled: true
+                        ensureRunning: true
+        efs_setup:
+          files:
+            "/home/centos/post_nfsstat":
+              content: !Sub |
+                #!/bin/bash
+
+                INPUT="$(cat)"
+                CW_JSON_OPEN='{ "Namespace": "EFS", "MetricData": [ '
+                CW_JSON_CLOSE=' ] }'
+                CW_JSON_METRIC=''
+                METRIC_COUNTER=0
+
+                for COL in 1 2 3 4 5 6; do
+
+                 COUNTER=0
+                 METRIC_FIELD=$COL
+                 DATA_FIELD=$(($COL+($COL-1)))
+
+                 while read line; do
+                   if [[ COUNTER -gt 0 ]]; then
+
+                     LINE=`echo $line | tr -s ' ' `
+                     AWS_COMMAND="aws cloudwatch put-metric-data --region ${AWS::Region}"
+                     MOD=$(( $COUNTER % 2))
+
+                     if [ $MOD -eq 1 ]; then
+                       METRIC_NAME=`echo $LINE | cut -d ' ' -f $METRIC_FIELD`
+                     else
+                       METRIC_VALUE=`echo $LINE | cut -d ' ' -f $DATA_FIELD`
+                     fi
+
+                     if [[ -n "$METRIC_NAME" && -n "$METRIC_VALUE" ]]; then
+                       INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+                       CW_JSON_METRIC="$CW_JSON_METRIC { \"MetricName\": \"$METRIC_NAME\", \"Dimensions\": [{\"Name\": \"InstanceId\", \"Value\": \"$INSTANCE_ID\"} ], \"Value\": $METRIC_VALUE },"
+                       unset METRIC_NAME
+                       unset METRIC_VALUE
+
+                       METRIC_COUNTER=$((METRIC_COUNTER+1))
+                       if [ $METRIC_COUNTER -eq 20 ]; then
+                         # 20 is max metric collection size, so we have to submit here
+                         aws cloudwatch put-metric-data --region ${AWS::Region} --cli-input-json "`echo $CW_JSON_OPEN ${!CW_JSON_METRIC%?} $CW_JSON_CLOSE`"
+
+                         # reset
+                         METRIC_COUNTER=0
+                         CW_JSON_METRIC=''
+                       fi
+                     fi
+
+
+
+                     COUNTER=$((COUNTER+1))
+                   fi
+
+                   if [[ "$line" == "Client nfs v4:" ]]; then
+                     # the next line is the good stuff
+                     COUNTER=$((COUNTER+1))
+                   fi
+                 done <<< "$INPUT"
+                done
+
+                # submit whatever is left
+                aws cloudwatch put-metric-data --region ${AWS::Region} --cli-input-json "`echo $CW_JSON_OPEN ${!CW_JSON_METRIC%?} $CW_JSON_CLOSE`"
+              mode: '000755'
+              owner: centos
+              group: centos
+            "/home/centos/crontab":
+              content: "* * * * * /usr/sbin/nfsstat | /home/centos/post_nfsstat\n"
+              owner: centos
+              group: centos
+        efs_mount:
+          commands:
+            01_mount:
+              command: !Sub >
+                mount -t nfs4 -o nfsvers=4.1 ${FileSystem}.efs.${AWS::Region}.amazonaws.com:/ /${MountPoint}
+            02_permissions:
+              command: !Sub "chown coderbot:sparkbeyond /${MountPoint}"
+        download_files:
+          commands:
+             01_download_filebeat_file:
+               command: !Sub "aws s3 cp s3://${S3Bucket}/${MajorRelease}/${MinorRelease}/${BuildNumber}/${App}/${EnvType}/filebeat.yml /etc/filebeat/ --region ${AWS::Region}"
+               cwd: "~"
+               ignoreErrors: "false"
+             02_restart_filebeat_service:
+               command: "service filebeat restart"
+               cwd: "~"
+               ignoreErrors: "false"
+                      
+    # Properties for LaunchConfiguration and Instance to be created from LaunchConfiguration
+    Properties:
+      ImageId: !Ref AMI
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      IamInstanceProfile: !Ref InstanceProfile
+      InstanceMonitoring: 'true'
+      AssociatePublicIpAddress: 'false'
+      SecurityGroups:
+        - !Ref sg
+      BlockDeviceMappings: 
+        - DeviceName: "/dev/sda1"
+          Ebs: 
+            VolumeSize: !Ref RootVolumeSize
+            VolumeType: "gp2"
+            Encrypted: "true"
+            #KmsKeyId: !Ref EC2KmsKeyId
+      # User Data commands to be run during Initialization of Server
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash
+            yum install -y epel-release
+            yum install -y awscli
+            /usr/bin/easy_install --script-dir /opt/aws/bin https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+            cp -v /usr/lib/python2*/site-packages/aws_cfn_bootstrap*/init/redhat/cfn-hup /etc/init.d
+            chmod +x /etc/init.d/cfn-hup
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource launchconfig --configsets MountConfig --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource asgroup --region ${AWS::Region}
+      
+  # ASG code for handling Classic Load Balancer properties
+  asgroup:
+    Type: 'AWS::AutoScaling::AutoScalingGroup'
+    Properties:
+      Cooldown: '300'
+      DesiredCapacity: !Ref DesiredCapacity
+      HealthCheckGracePeriod: '300'
+      HealthCheckType: EC2
+      MaxSize: '4'
+      MinSize: '1'
+      VPCZoneIdentifier:
+        # Fetch EC2Subnet1 and EC2Subnet2 values
+        # Based on the condition defined as per Environment selected
+        - !If [GetValNetworkValues, !ImportValue subnet33b0A, !If [GetProdNetworkValues, !ImportValue subnet34b0A, !If [GetDevNetworkValues, !ImportValue subnet33b1A, !If [GetMLNetworkValues, !ImportValue subnet34b1A, !If [GetPTNetworkValues, !ImportValue subnet33b4A, !If [GetUTNetworkValues, !ImportValue subnet33b3A, !If [GetSITNetworkValues, !ImportValue subnet33b2A, !If [GetProdNetworkValuesSecondary,!ImportValue subnet34b0B, !If [GetValNetworkValuesSecondary, !ImportValue subnet33b0B, ""]]]]]]]]]
+        - !If [GetValNetworkValues, !ImportValue subnet37b0A, !If [GetProdNetworkValues, !ImportValue subnet38b0A, !If [GetDevNetworkValues, !ImportValue subnet37b1A, !If [GetMLNetworkValues, !ImportValue subnet38b1A, !If [GetPTNetworkValues, !ImportValue subnet35b4A, !If [GetUTNetworkValues, !ImportValue subnet35b3A, !If [GetSITNetworkValues, !ImportValue subnet35b2A, !If [GetProdNetworkValuesSecondary,!ImportValue subnet38b0B, !If [GetValNetworkValuesSecondary, !ImportValue subnet37b0B, ""]]]]]]]]]
+      LaunchConfigurationName: !Ref launchconfig
+      LoadBalancerNames:
+        - !Ref ClassicLoadBalancer
+      # Adding tags to identify the ASG resource
+      # Same tags will be applicable to the instance launched
+      Tags:
+        - Key: Name
+          Value: !Sub ${Prefix}-${EnvType}-${App}
+          PropagateAtLaunch: true
+        - Key: Project
+          Value: !Ref App
+          PropagateAtLaunch: true
+        - Key: Environment
+          Value: !Ref EnvType
+          PropagateAtLaunch: true
+        - Key: Scheduled
+          Value: "no"
+          PropagateAtLaunch: true
+      TerminationPolicies:
+        - Default
+    DependsOn:
+        - ClassicLoadBalancer
+        - MountTargetAZ1
+        - MountTargetAZ2         
+    #Creation policy for resource creation and deployment
+    CreationPolicy:
+      AutoScalingCreationPolicy:
+        MinSuccessfulInstancesPercent: 100
+      ResourceSignal:
+        Count: '1'
+        Timeout: PT10M
+    #Update policy for deploying new version
+    UpdatePolicy:
+      AutoScalingScheduledAction:
+        IgnoreUnmodifiedGroupSizeProperties: 'true'
+      AutoScalingRollingUpdate:
+        MinInstancesInService: '1'
+        MaxBatchSize: '2'
+        PauseTime: PT3M
+        WaitOnResourceSignals: 'true'
+        
+  # Classic LoadBalancer for this application
+  ClassicLoadBalancer:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      LoadBalancerName: !Sub ${Prefix}-${EnvType}-${App}-elb
+      Scheme: internal
+      SecurityGroups: 
+        - !Ref sg
+      # fetch ELB Subnet1 and ELB Subnet2 values
+      # same subnet as for ec2 instance
+      Subnets:
+        - !If [GetValNetworkValues, !ImportValue subnet33b0A, !If [GetProdNetworkValues, !ImportValue subnet34b0A, !If [GetDevNetworkValues, !ImportValue subnet33b1A, !If [GetMLNetworkValues, !ImportValue subnet34b1A, !If [GetPTNetworkValues, !ImportValue subnet33b4A, !If [GetUTNetworkValues, !ImportValue subnet33b3A, !If [GetSITNetworkValues, !ImportValue subnet33b2A, !If [GetProdNetworkValuesSecondary,!ImportValue subnet34b0B, !If [GetValNetworkValuesSecondary, !ImportValue subnet33b0B, ""]]]]]]]]]
+        - !If [GetValNetworkValues, !ImportValue subnet37b0A, !If [GetProdNetworkValues, !ImportValue subnet38b0A, !If [GetDevNetworkValues, !ImportValue subnet37b1A, !If [GetMLNetworkValues, !ImportValue subnet38b1A, !If [GetPTNetworkValues, !ImportValue subnet35b4A, !If [GetUTNetworkValues, !ImportValue subnet35b3A, !If [GetSITNetworkValues, !ImportValue subnet35b2A, !If [GetProdNetworkValuesSecondary,!ImportValue subnet38b0B, !If [GetValNetworkValuesSecondary, !ImportValue subnet37b0B, ""]]]]]]]]]
+      Tags:
+        - Key: Name
+          Value: !Sub ${Prefix}-${EnvType}-${App}
+        - Key: Project
+          Value: centos
+        - Key: Environment
+          Value: !Ref EnvType
+      Listeners:
+      - LoadBalancerPort: !Ref AppPort
+        InstancePort:
+          Ref: AppPort
+        Protocol: HTTP
+      HealthCheck:
+        Target:
+          Fn::Join:
+          - ''
+          - - 'HTTP:'
+            - Ref: AppPort
+            - "/predbox/userGuide"
+        HealthyThreshold: '10'
+        UnhealthyThreshold: '2'
+        Interval: '30'
+        Timeout: '5'
+  # Creating alarm to identify any unhealthy host under Classic LoadBalancer
+  UnhealthyHostAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+         AlarmName: !Sub ${Prefix}-${EnvType}-${App}-alarm
+         AlarmDescription: Unhealthy host under Prediction Server ELB
+         Namespace: AWS/ELB
+         Dimensions:
+          - Name: Per-LB Metrics
+            Value: !Sub ${Prefix}-${EnvType}-${App}-elb
+         MetricName: UnHealthyHostCount
+         ComparisonOperator: GreaterThanThreshold
+         Statistic: Minimum
+         Period: 60
+         EvaluationPeriods: 1
+         Threshold: 0
+  # Creating DNS record for the ClassicLoadBalancer for this Application
+  DNSRecord:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName: !Ref HostedZoneResource
+      Comment: Zone apex alias targeted to Elastic LoadBalancer.
+      RecordSets:
+      - Name: !Sub "${Prefix}-${EnvType}-${App}-elb.${HostedZoneResource}"
+        Type: A
+        AliasTarget:
+          HostedZoneId: !GetAtt ClassicLoadBalancer.CanonicalHostedZoneNameID
+          DNSName: !GetAtt ClassicLoadBalancer.DNSName
+Outputs:
+  MountTargetID:
+    Description: Mount target ID - AZ1
+    Value:
+      Ref: MountTargetAZ1
+    Description: Mount target ID - AZ2
+    Value:
+      Ref: MountTargetAZ2
+  FileSystemID:
+    Description: File system ID
+    Value:
+      Ref: FileSystem

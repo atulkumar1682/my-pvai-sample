@@ -1,0 +1,12 @@
+1. Stop the nessusagent service: sudo service nessusagent stop
+2. Unlink the nessusagent via below cmd: 
+   sudo /opt/nessus_agent/sbin/nessuscli agent unlink
+3. Just empty the file tenable_tag present in /etc/tenable_tag instead of deleting.
+4. Uninstall the nessusagent like below.
+   sudo yum remove NessusAgent
+5. Remove the tenable folder from /opt dir.
+6. Remove the nessusagent log file from /tmp folder.
+7. Install nessusagent with following cmd
+   sudo wget https://s3.amazonaws.com/tools-verification/NessusAgent-7.1.0-amzn.x86_64.rpm -P /tmp
+
+

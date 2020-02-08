@@ -1,0 +1,322 @@
+#------------------------------------------------------------------------------------#
+## Copyright © Genpact 2018. All Rights Reserved.                                   ##
+## Ltd trading as G in NYSE - Registered in US.                                     ##
+## Registered Office - Canon's Court, 22 Victoria Street HAMILTON, HM 12, Bermuda.  ##
+#------------------------------------------------------------------------------------#
+## Author = 'Vivek Trivedi (Genpact Limited)'                                       ##
+## Version = '1.0.0'                                                                ##
+## Date = 6-Apr-2018                                                                ##
+#------------------------------------------------------------------------------------#
+AWSTemplateFormatVersion: 2010-09-09
+Description: CORE VPC Peer Creation
+Parameters:
+    Region: 
+        Description: AWS Region
+        Default: N-Virginia(us-east-1)
+        Type: String
+        AllowedValues: 
+           - N-Virginia(us-east-1)
+           - Ireland(eu-west-1)
+        ConstraintDescription: Select the Region for creation.
+    EnvType: 
+        Description: Environment Type
+        Default: DEV/ML
+        Type: String
+        AllowedValues: 
+           - DEV/ML
+           - SIT
+           - VAL/PROD
+           - UserTraining
+           - PerformanceTesting
+        ConstraintDescription: Select the Environment for Creation.
+Conditions: 
+  CreateCondition1A: !And
+        - !Equals [ !Ref EnvType, DEV/ML ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition2A: !And
+        - !Equals [ !Ref EnvType, SIT ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition0A: !And
+        - !Equals [ !Ref EnvType, VAL/PROD ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition0B: !And
+        - !Equals [ !Ref Region, Ireland(eu-west-1) ]
+        - !Equals [ !Ref EnvType, VAL/PROD ]
+  CreateCondition3A: !And
+        - !Equals [ !Ref EnvType, UserTraining ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition4A: !And
+        - !Equals [ !Ref EnvType, PerformanceTesting ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+Resources:
+  peervpc1Ato21A:
+    Type: 'AWS::EC2::VPCPeeringConnection'
+    Condition: CreateCondition1A
+    Properties:
+      Tags:
+        - Key: Name
+          Value: peervpc1Ato21A
+      VpcId: !ImportValue vpc1A
+      PeerVpcId: !ImportValue vpc21A
+  peervpc1Ato22A:
+    Type: 'AWS::EC2::VPCPeeringConnection'
+    Condition: CreateCondition2A
+    Properties:
+      Tags:
+        - Key: Name
+          Value: peervpc1Ato22A
+      VpcId: !ImportValue vpc1A
+      PeerVpcId: !ImportValue vpc22A
+  peervpc1Ato20A:
+    Type: 'AWS::EC2::VPCPeeringConnection'
+    Condition: CreateCondition0A
+    Properties:
+      Tags:
+        - Key: Name
+          Value: peervpc1Ato20A
+      VpcId: !ImportValue vpc1A
+      PeerVpcId: !ImportValue vpc20A
+  peervpc1Ato23A:
+    Type: 'AWS::EC2::VPCPeeringConnection'
+    Condition: CreateCondition3A
+    Properties:
+      Tags:
+        - Key: Name
+          Value: peervpc1Ato23A
+      VpcId: !ImportValue vpc1A
+      PeerVpcId: !ImportValue vpc23A	  
+  peervpc1Ato24A:
+    Type: 'AWS::EC2::VPCPeeringConnection'
+    Condition: CreateCondition4A
+    Properties:
+      Tags:
+        - Key: Name
+          Value: peervpc1Ato24A
+      VpcId: !ImportValue vpc1A
+      PeerVpcId: !ImportValue vpc24A	
+  peervpc1Ato31A:
+    Type: 'AWS::EC2::VPCPeeringConnection'
+    Condition: CreateCondition1A
+    Properties:
+      Tags:
+        - Key: Name
+          Value: peervpc1Ato31A
+      VpcId: !ImportValue vpc1A
+      PeerVpcId: !ImportValue vpc31A
+  peervpc1Ato32A:
+    Type: 'AWS::EC2::VPCPeeringConnection'
+    Condition: CreateCondition2A
+    Properties:
+      Tags:
+        - Key: Name
+          Value: peervpc1Ato32A
+      VpcId: !ImportValue vpc1A
+      PeerVpcId: !ImportValue vpc32A
+  peervpc1Ato30A:
+    Type: 'AWS::EC2::VPCPeeringConnection'
+    Condition: CreateCondition0A
+    Properties:
+      Tags:
+        - Key: Name
+          Value: peervpc1Ato30A
+      VpcId: !ImportValue vpc1A
+      PeerVpcId: !ImportValue vpc30A
+  peervpc1Ato33A:
+    Type: 'AWS::EC2::VPCPeeringConnection'
+    Condition: CreateCondition3A
+    Properties:
+      Tags:
+        - Key: Name
+          Value: peervpc1Ato33A
+      VpcId: !ImportValue vpc1A
+      PeerVpcId: !ImportValue vpc33A	  
+  peervpc1Ato34A:
+    Type: 'AWS::EC2::VPCPeeringConnection'
+    Condition: CreateCondition4A
+    Properties:
+      Tags:
+        - Key: Name
+          Value: peervpc1Ato34A
+      VpcId: !ImportValue vpc1A
+      PeerVpcId: !ImportValue vpc34A
+  peervpc21Ato31A:
+    Type: 'AWS::EC2::VPCPeeringConnection'
+    Condition: CreateCondition1A
+    Properties:
+      Tags:
+        - Key: Name
+          Value: peervpc21Ato31A
+      VpcId: !ImportValue vpc21A
+      PeerVpcId: !ImportValue vpc31A	
+  peervpc22Ato32A:
+    Type: 'AWS::EC2::VPCPeeringConnection'
+    Condition: CreateCondition2A    
+    Properties:
+      Tags:
+        - Key: Name
+          Value: peervpc22Ato32A
+      VpcId: !ImportValue vpc22A
+      PeerVpcId: !ImportValue vpc32A
+  peervpc20Ato30A:
+    Type: 'AWS::EC2::VPCPeeringConnection'
+    Condition: CreateCondition0A
+    Properties:
+      Tags:
+        - Key: Name
+          Value: peervpc20Ato30A
+      VpcId: !ImportValue vpc20A
+      PeerVpcId: !ImportValue vpc30A
+  peervpc23Ato33A:
+    Type: 'AWS::EC2::VPCPeeringConnection'
+    Condition: CreateCondition3A
+    Properties:
+      Tags:
+        - Key: Name
+          Value: peervpc23Ato33A
+      VpcId: !ImportValue vpc23A
+      PeerVpcId: !ImportValue vpc33A
+  peervpc24Ato34A:
+    Type: 'AWS::EC2::VPCPeeringConnection'
+    Condition: CreateCondition4A
+    Properties:
+      Tags:
+        - Key: Name
+          Value: peervpc24Ato34A
+      VpcId: !ImportValue vpc24A
+      PeerVpcId: !ImportValue vpc34A
+  peervpc1Bto20B:
+    Type: 'AWS::EC2::VPCPeeringConnection'
+    Condition: CreateCondition0B
+    Properties:
+      Tags:
+        - Key: Name
+          Value: peervpc1Bto20B
+      VpcId: !ImportValue vpc1B
+      PeerVpcId: !ImportValue vpc20B
+  peervpc1Bto30B:
+    Type: 'AWS::EC2::VPCPeeringConnection'
+    Condition: CreateCondition0B
+    Properties:
+      Tags:
+        - Key: Name
+          Value: peervpc1Bto30B
+      VpcId: !ImportValue vpc1B
+      PeerVpcId: !ImportValue vpc30B
+  peervpc20Bto30B:
+    Type: 'AWS::EC2::VPCPeeringConnection'
+    Condition: CreateCondition0B
+    Properties:
+      Tags:
+        - Key: Name
+          Value: peervpc20Bto30B
+      VpcId: !ImportValue vpc20B
+      PeerVpcId: !ImportValue vpc30B
+Outputs:
+  peervpc1Ato21A:
+    Description: Peer from VPC-1 to VPC-2 for DEV & ML Environment for Virginia.
+    Condition: CreateCondition1A
+    Value: !Ref peervpc1Ato21A 
+    Export:
+      Name: peervpc1Ato21A
+  peervpc1Ato22A:
+    Description: Peer from VPC-1 to VPC-2 for SIT Environment for Virginia.
+    Condition: CreateCondition2A
+    Value: !Ref peervpc1Ato22A 
+    Export:
+      Name: peervpc1Ato22A
+  peervpc1Ato20A:
+    Description: Peer from VPC-1 to VPC-2 for VAL & PROD Environment for Virginia.
+    Condition: CreateCondition0A
+    Value: !Ref peervpc1Ato20A 
+    Export:
+      Name: peervpc1Ato20A
+  peervpc1Ato23A:
+    Description: Peer from VPC-1 to VPC-2 for UserTraining Environment for Virginia.
+    Condition: CreateCondition3A
+    Value: !Ref peervpc1Ato23A 
+    Export:
+      Name: peervpc1Ato23A
+  peervpc1Ato24A:
+    Description: Peer from VPC-1 to VPC-2 for PerformanceTesting Environment for Virginia.
+    Condition: CreateCondition4A
+    Value: !Ref peervpc1Ato24A 
+    Export:
+      Name: peervpc1Ato24A
+  peervpc1Ato31A:
+    Description: Peer from VPC-1 to VPC-3 for DEV & ML Environment for Virginia.
+    Condition: CreateCondition1A
+    Value: !Ref peervpc1Ato31A 
+    Export:
+      Name: peervpc1Ato31A
+  peervpc1Ato32A:
+    Description: Peer from VPC-1 to VPC-3 for SIT Environment for Virginia.
+    Condition: CreateCondition2A
+    Value: !Ref peervpc1Ato32A 
+    Export:
+      Name: peervpc1Ato32A
+  peervpc1Ato30A:
+    Description: Peer from VPC-1 to VPC-3 for VAL & PROD Environment for Virginia.
+    Condition: CreateCondition0A
+    Value: !Ref peervpc1Ato30A 
+    Export:
+      Name: peervpc1Ato30A
+  peervpc1Ato33A:
+    Description: Peer from VPC-1 to VPC-3 for UserTraining Environment for Virginia.
+    Condition: CreateCondition3A
+    Value: !Ref peervpc1Ato33A 
+    Export:
+      Name: peervpc1Ato33A
+  peervpc1Ato34A:
+    Description: Peer from VPC-1 to VPC-3 for PerformanceTesting Environment for Virginia.
+    Condition: CreateCondition4A
+    Value: !Ref peervpc1Ato34A 
+    Export:
+      Name: peervpc1Ato34A
+  peervpc21Ato31A:
+    Description: Peer from VPC-2 to VPC-3 for DEV & ML Environment for Virginia.
+    Condition: CreateCondition1A
+    Value: !Ref peervpc21Ato31A 
+    Export:
+      Name: peervpc21Ato31A
+  peervpc22Ato32A:
+    Description: Peer from VPC-2 to VPC-3 for SIT Environment for Virginia.
+    Condition: CreateCondition2A
+    Value: !Ref peervpc22Ato32A 
+    Export:
+      Name: peervpc22Ato32A
+  peervpc20Ato30A:
+    Description: Peer from VPC-2 to VPC-3 for VAL & PROD Environment for Virginia.
+    Condition: CreateCondition0A
+    Value: !Ref peervpc20Ato30A 
+    Export:
+      Name: peervpc20Ato30A
+  peervpc23Ato33A:
+    Description: Peer from VPC-2 to VPC-3 for UserTraining Environment for Virginia.
+    Condition: CreateCondition3A
+    Value: !Ref peervpc23Ato33A 
+    Export:
+      Name: peervpc23Ato33A
+  peervpc24Ato34A:
+    Description: Peer from VPC-2 to VPC-3 for PerformanceTesting Environment for Virginia.
+    Condition: CreateCondition4A
+    Value: !Ref peervpc24Ato34A 
+    Export:
+      Name: peervpc24Ato34A
+  peervpc1Bto20B:
+    Description: Peer from VPC-1 to VPC-2 for VAL & PROD Environment for Ireland.
+    Condition: CreateCondition0B
+    Value: !Ref peervpc1Bto20B 
+    Export:
+      Name: peervpc1Bto20B
+  peervpc1Bto30B:
+    Description: Peer from VPC-1 to VPC-3 for VAL & PROD Environment for Ireland.
+    Condition: CreateCondition0B
+    Value: !Ref peervpc1Bto30B 
+    Export:
+      Name: peervpc1Bto30B
+  peervpc20Bto30B:
+    Description: Peer from VPC-2 to VPC-3 for VAL & PROD Environment for Ireland.
+    Condition: CreateCondition0B
+    Value: !Ref peervpc20Bto30B 
+    Export:
+      Name: peervpc20Bto30B

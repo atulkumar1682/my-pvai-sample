@@ -1,0 +1,56 @@
+==============================================================
+$ mkdir restore-es-snapshot
+$ cd restore-es-snapshot
+$ pip install requests -t .
+$ pip install requests_aws4auth -t .
+
+=============================================================
+zip -X -r ./restore-es-snapshot.zip *
+=======================================
+
+$ aws s3 cp restore-es-snapshot.zip s3://pvai-devops-lambda-functions/ --acl bucket-owner-full-control
+
+$ aws lambda update-function-code --function-name ut-restore-es-snapshot --zip-file fileb://restore-es-snapshot.zip --publish
+
+============================================================
+
+curl -XGET https://vpc-pvai-ut-logs-5uw5rjgyv2eeqoe7bb2d4zpiwm.us-east-1.es.amazonaws.com/_snapshot/ut-es-snapshot-repo/_all?pretty
+
+-------------------------------------
+https://aws.amazon.com/premiumsupport/knowledge-center/elasticsearch-kibana-error/
+
+{"error":{"root_cause":[{"type":"snapshot_restore_exception","reason":"[<repository-name>:<snapshot-name>/1A2B34aZQFWQpFOYYJfxmQ]
+ cannot restore index [.kibana] because it's 
+open"}],"type":"snapshot_restore_exception","reason":"[<repository-name>:<snapshot-name>/1A2B34aZQFWQpFOYYJfxmQ]
+ cannot restore index [.kibana] because it's open"},"status":500}
+
+================
+
+Short Description:
+-----------------
+In Elasticsearch versions 5.1 and later, Amazon ES monitors the .kibana index and recreates it if it's deleted. This behavior can cause the restoration to fail.  
+
+Resolution
+1.    Run commands similar to the following to rename the .kibana index when you restore the indices. In this example, the .kibana index is renamed to "restored_.kibana".
+
+# restore indices.   
+$ curl -XPOST -H 'Content-Type: application/json' 'https://<domain-end-point>/_snapshot/<repository-name>/<snapshot-name>/_restore' -d '
+{
+  "indices": "*",
+  "ignore_unavailable": true,
+  "include_global_state": true,
+  "rename_pattern": ".kibana",
+  "rename_replacement": "restored_.kibana"
+}'
+2.    After you restore the indices, use the _reindex API to rename "restored_.kibana" back to ".kibana". Example:
+
+# reindex restored_.kibana to .kibana 
+$ curl -XPOST -H 'Content-Type: application/json' 'https://<domain-end-point>/_reindex' -d '
+{
+  "source": {
+    "index": "restored_.kibana"
+  },
+  "dest": {
+    "index": ".kibana"
+  }
+}'

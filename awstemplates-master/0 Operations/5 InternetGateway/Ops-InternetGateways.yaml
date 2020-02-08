@@ -1,0 +1,66 @@
+#------------------------------------------------------------------------------------#
+## Copyright © Genpact 2018. All Rights Reserved.                                   ##
+## Ltd trading as G in NYSE - Registered in US.                                     ##
+## Registered Office - Canon's Court, 22 Victoria Street HAMILTON, HM 12, Bermuda.  ##
+#------------------------------------------------------------------------------------#
+## Author = 'Vivek Trivedi (Genpact Limited)'                                       ##
+## Version = '1.0.0'                                                                ##
+## Date = 6-Apr-2018                                                                ##
+#------------------------------------------------------------------------------------#
+AWSTemplateFormatVersion: 2010-09-09
+Description: Operations InternetGateway Creation and IG-VPC Association
+Parameters:
+    Region: 
+        Description: AWS Region
+        Default: N-Virginia(us-east-1)
+        Type: String
+        AllowedValues: 
+           - N-Virginia(us-east-1)
+           - Ireland(eu-west-1)
+        ConstraintDescription: Select the Region for creation.
+Conditions: 
+  CreateCondition-A: !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition-B: !Equals [ !Ref Region, Ireland(eu-west-1) ]
+Resources:
+  vpc1igA:
+    Type: 'AWS::EC2::InternetGateway'
+    Condition: CreateCondition-A
+    Properties:
+      Tags:
+        - Key: Name
+          Value: vpc1igA
+          
+  vpc1igB:
+    Type: 'AWS::EC2::InternetGateway'
+    Condition: CreateCondition-B
+    Properties:
+      Tags:
+        - Key: Name
+          Value: vpc1igB
+
+  attachvpc1igA:
+    Condition: CreateCondition-A
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !ImportValue vpc1A
+      InternetGatewayId: !Ref vpc1igA 
+ 
+  attachvpc1igB:
+    Condition: CreateCondition-B
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !ImportValue vpc1B
+      InternetGatewayId: !Ref vpc1igB
+Outputs: 
+  vpc1igA:
+    Description: Internet Gateway VPC-1 Operations in Virginia
+    Condition: CreateCondition-A
+    Value: !Ref vpc1igA
+    Export:
+      Name: vpc1igA
+  vpc1igB:
+    Description: Internet Gateway VPC-1 Operations in Virginia
+    Condition: CreateCondition-B
+    Value: !Ref vpc1igB
+    Export:
+      Name: vpc1igB

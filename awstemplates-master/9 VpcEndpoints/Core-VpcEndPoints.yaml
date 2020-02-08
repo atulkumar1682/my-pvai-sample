@@ -1,0 +1,334 @@
+#------------------------------------------------------------------------------------#
+## Copyright © Genpact 2018. All Rights Reserved.                                   ##
+## Ltd trading as G in NYSE - Registered in US.                                     ##
+## Registered Office - Canon's Court, 22 Victoria Street HAMILTON, HM 12, Bermuda.  ##
+#------------------------------------------------------------------------------------#
+## Author = 'Vivek Trivedi (Genpact Limited)'                                       ##
+## Version = '1.0.0'                                                                ##
+## Date = 6-Apr-2018                                                                ##
+#------------------------------------------------------------------------------------#
+## Modified_by = 'Vivek Trivedi (Genpact Limited)'                                  ##
+## Version = '1.0.1'                                                                ##
+## Changes = "VPC Endpoint for VPC-2 added for all Environments"                    ##
+## Date = 1-Aug-2018                                                                ##
+# -----------------------------------------------------------------------------------#
+AWSTemplateFormatVersion: 2010-09-09
+Description: Core IG - NAT Routes for All Regions.
+Parameters:
+    Region: 
+        Description: AWS Region
+        Default: N-Virginia(us-east-1)
+        Type: String
+        AllowedValues: 
+           - N-Virginia(us-east-1)
+           - Ireland(eu-west-1)
+        ConstraintDescription: Select the Region for creation.
+    EnvType: 
+        Description: Environment Type
+        Default: DEV/ML
+        Type: String
+        AllowedValues: 
+           - DEV/ML
+           - SIT
+           - VAL/PROD
+           - UserTraining
+           - PerformanceTesting
+        ConstraintDescription: Select the Environment for Creation.
+Conditions: 
+  CreateCondition1A: !And
+        - !Equals [ !Ref EnvType, DEV/ML ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition2A: !And
+        - !Equals [ !Ref EnvType, SIT ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition0A: !And
+        - !Equals [ !Ref EnvType, VAL/PROD ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition0B: !And
+        - !Equals [ !Ref Region, Ireland(eu-west-1) ]
+        - !Equals [ !Ref EnvType, VAL/PROD ]
+  CreateCondition3A: !And
+        - !Equals [ !Ref EnvType, UserTraining ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition4A: !And
+        - !Equals [ !Ref EnvType, PerformanceTesting ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+Resources:
+  vpc21AS3Endpoint1A:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateCondition1A 
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - 's3:*'
+            Resource:
+              - 'arn:aws:s3:::packages.*.amazonaws.com/*'
+              - 'arn:aws:s3:::repo.*.amazonaws.com/*'
+              - 'arn:aws:s3:::*'
+      RouteTableIds:
+        - !ImportValue vpc2rt2b1A
+      ServiceName: !Join 
+        - ''
+        - - com.amazonaws.
+          - !Ref 'AWS::Region'
+          - .s3
+      VpcId: !ImportValue vpc21A
+  vpc22AS3Endpoint2A:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateCondition2A 
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - 's3:*'
+            Resource:
+              - 'arn:aws:s3:::packages.*.amazonaws.com/*'
+              - 'arn:aws:s3:::repo.*.amazonaws.com/*'
+              - 'arn:aws:s3:::*'
+      RouteTableIds:
+        - !ImportValue vpc2rt2b2A
+      ServiceName: !Join 
+        - ''
+        - - com.amazonaws.
+          - !Ref 'AWS::Region'
+          - .s3
+      VpcId: !ImportValue vpc22A
+  vpc20AS3Endpoint0A:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateCondition0A 
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - 's3:*'
+            Resource:
+              - 'arn:aws:s3:::packages.*.amazonaws.com/*'
+              - 'arn:aws:s3:::repo.*.amazonaws.com/*'
+              - 'arn:aws:s3:::*'
+      RouteTableIds:
+        - !ImportValue vpc2rt2b0A
+      ServiceName: !Join 
+        - ''
+        - - com.amazonaws.
+          - !Ref 'AWS::Region'
+          - .s3
+      VpcId: !ImportValue vpc20A
+  vpc20BS3Endpoint0B:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateCondition0B 
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - 's3:*'
+            Resource:
+              - 'arn:aws:s3:::packages.*.amazonaws.com/*'
+              - 'arn:aws:s3:::repo.*.amazonaws.com/*'
+              - 'arn:aws:s3:::*'
+      RouteTableIds:
+        - !ImportValue vpc2rt2b0B
+      ServiceName: !Join 
+        - ''
+        - - com.amazonaws.
+          - !Ref 'AWS::Region'
+          - .s3
+      VpcId: !ImportValue vpc20B
+  vpc23AS3Endpoint3A:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateCondition3A 
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - 's3:*'
+            Resource:
+              - 'arn:aws:s3:::packages.*.amazonaws.com/*'
+              - 'arn:aws:s3:::repo.*.amazonaws.com/*'
+              - 'arn:aws:s3:::*'
+      RouteTableIds:
+        - !ImportValue vpc2rt2b3A
+      ServiceName: !Join 
+        - ''
+        - - com.amazonaws.
+          - !Ref 'AWS::Region'
+          - .s3
+      VpcId: !ImportValue vpc23A
+  vpc24AS3Endpoint4A:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateCondition4A 
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - 's3:*'
+            Resource:
+              - 'arn:aws:s3:::packages.*.amazonaws.com/*'
+              - 'arn:aws:s3:::repo.*.amazonaws.com/*'
+              - 'arn:aws:s3:::*'
+      RouteTableIds:
+        - !ImportValue vpc2rt2b4A
+      ServiceName: !Join 
+        - ''
+        - - com.amazonaws.
+          - !Ref 'AWS::Region'
+          - .s3
+      VpcId: !ImportValue vpc24A
+      
+  vpc31AS3Endpoint1A:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateCondition1A 
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - 's3:*'
+            Resource:
+              - 'arn:aws:s3:::packages.*.amazonaws.com/*'
+              - 'arn:aws:s3:::repo.*.amazonaws.com/*'
+              - 'arn:aws:s3:::*'
+      RouteTableIds:
+        - !ImportValue vpc3rt2b1A
+      ServiceName: !Join 
+        - ''
+        - - com.amazonaws.
+          - !Ref 'AWS::Region'
+          - .s3
+      VpcId: !ImportValue vpc31A
+  vpc32AS3Endpoint2A:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateCondition2A 
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - 's3:*'
+            Resource:
+              - 'arn:aws:s3:::packages.*.amazonaws.com/*'
+              - 'arn:aws:s3:::repo.*.amazonaws.com/*'
+              - 'arn:aws:s3:::*'
+      RouteTableIds:
+        - !ImportValue vpc3rt2b2A
+      ServiceName: !Join 
+        - ''
+        - - com.amazonaws.
+          - !Ref 'AWS::Region'
+          - .s3
+      VpcId: !ImportValue vpc32A
+  vpc30AS3Endpoint0A:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateCondition0A 
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - 's3:*'
+            Resource:
+              - 'arn:aws:s3:::packages.*.amazonaws.com/*'
+              - 'arn:aws:s3:::repo.*.amazonaws.com/*'
+              - 'arn:aws:s3:::*'
+      RouteTableIds:
+        - !ImportValue vpc3rt2b0A
+      ServiceName: !Join 
+        - ''
+        - - com.amazonaws.
+          - !Ref 'AWS::Region'
+          - .s3
+      VpcId: !ImportValue vpc30A
+  vpc30BS3Endpoint0B:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateCondition0B 
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - 's3:*'
+            Resource:
+              - 'arn:aws:s3:::packages.*.amazonaws.com/*'
+              - 'arn:aws:s3:::repo.*.amazonaws.com/*'
+              - 'arn:aws:s3:::*'
+      RouteTableIds:
+        - !ImportValue vpc3rt2b0B
+      ServiceName: !Join 
+        - ''
+        - - com.amazonaws.
+          - !Ref 'AWS::Region'
+          - .s3
+      VpcId: !ImportValue vpc30B
+  vpc33AS3Endpoint3A:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateCondition3A 
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - 's3:*'
+            Resource:
+              - 'arn:aws:s3:::packages.*.amazonaws.com/*'
+              - 'arn:aws:s3:::repo.*.amazonaws.com/*'
+              - 'arn:aws:s3:::*'
+      RouteTableIds:
+        - !ImportValue vpc3rt2b3A
+      ServiceName: !Join 
+        - ''
+        - - com.amazonaws.
+          - !Ref 'AWS::Region'
+          - .s3
+      VpcId: !ImportValue vpc33A
+  vpc34AS3Endpoint4A:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateCondition4A 
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - 's3:*'
+            Resource:
+              - 'arn:aws:s3:::packages.*.amazonaws.com/*'
+              - 'arn:aws:s3:::repo.*.amazonaws.com/*'
+              - 'arn:aws:s3:::*'
+      RouteTableIds:
+        - !ImportValue vpc3rt2b4A
+      ServiceName: !Join 
+        - ''
+        - - com.amazonaws.
+          - !Ref 'AWS::Region'
+          - .s3
+      VpcId: !ImportValue vpc34A
+Description: CoreVPC3 S3-VPC Enpoints Creation.

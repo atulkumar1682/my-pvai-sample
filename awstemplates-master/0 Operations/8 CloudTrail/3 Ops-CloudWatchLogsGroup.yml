@@ -1,0 +1,43 @@
+#------------------------------------------------------------------------------------#
+## Copyright © Genpact 2018. All Rights Reserved.                                   ##
+## Ltd trading as G in NYSE - Registered in US.                                     ##
+## Registered Office - Canon's Court, 22 Victoria Street HAMILTON, HM 12, Bermuda.  ##
+#------------------------------------------------------------------------------------#
+## Author = 'Pankaj Motwani  (Genpact Limited)'                                     ##
+## Version = '1.0.0'                                                                ##
+## Date = 6-Apr-2018                                                                ##
+#------------------------------------------------------------------------------------#
+#------------------------------------------------------------------------------------#
+## modified_by = 'Sandeep Kumar  (Genpact Limited)'                                 ##
+## ver = '1.0.1'                                                                    ##
+## changes = "Environment specific dependencies removed and all resources           ##
+##           created at account level only"                                         ##
+## date = '1-Oct-2018'                                                              ##
+#------------------------------------------------------------------------------------#
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Log Group Resource Creation.
+Parameters:
+   # AWS Account Name to be entered
+    AWSAccount: 
+        Description: AWS Account for CloudTrail logs
+        Default: product
+        Type: String
+    RetentionPeriod:
+        Description: Retention Period in Days
+        Default: 60
+        Type: Number 
+# Create Log Group at account level       
+Resources:
+  cloudwatchlog:
+    Type: "AWS::Logs::LogGroup"
+    Properties: 
+        LogGroupName: "cloudtrail_${AWSAccount}
+        RetentionInDays: !Ref RetentionPeriod
+# Get the Output dynamically as per Environment Selected
+# And resource created
+Outputs:
+  cloudwatchlog:
+    Description: Exporting log group
+    Value: !Ref cloudwatchlog
+    Export:      
+      Name: !Sub cloudwatchlog_${AWSAccount}

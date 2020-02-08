@@ -1,0 +1,50 @@
+
+conn pvai/MyPassword@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=dbml.cejzyzh4tgk7.us-east-1.rds.amazonaws.com)(PORT=1521))(CONNECT_DATA=(SID=DBML)))
+dbpt.cbf4wuejqef3.us-east-1.rds.amazonaws.com
+conn pvai/MyPassword@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=dbdev.cbvl7gyb6onb.eu-west-1.rds.amazonaws.com)(PORT=1521))(CONNECT_DATA=(SID=DBDEV)))
+conn PVAIINTAKE/PVAIINTAKE@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=dbdev.cbvl7gyb6onb.eu-west-1.rds.amazonaws.com)(PORT=1521))(CONNECT_DATA=(SID=DBDEV)))
+conn PVAIXCE/PVAIXCE@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=dbut.cbf4wuejqef3.us-east-1.rds.amazonaws.com)(PORT=1521))(CONNECT_DATA=(SID=DBUT)))
+
+conn RAGEV15/RAGEV15@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=dbut.cbf4wuejqef3.us-east-1.rds.amazonaws.com)(PORT=1521))(CONNECT_DATA=(SID=DBUT)))
+
+Need to check the connectivity with database 
+select name,open_mode from v$database;       ( Failed )
+Check required tablespace has created or not 
+select tablespace_name,file_name from dba_data_files where tablespace_name in('LAU_DATA','LAU_INDEX','LAU_LOB','USERS');
+
+put value RAGEV15
+password : RAGEV15
+tempfs  : TEMP
+
+Validata the schema created on above steps:
+select username,account_status,created from dba_users where username in('RAGEV15','RAGE_EXTRACTION');
+select * from dba_role_privs where grantee in('RAGEV15','RAGE_EXTRACTION');
+select * from dba_sys_privs where grantee in('RAGEV15','RAGE_EXTRACTION');
+conn RAGEV15/RAGEV15@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=dbpt.cbf4wuejqef3.us-east-1.rds.amazonaws.com)(PORT=1521))(CONNECT_DATA=(SID=DBPT)))
+run @RAGE_ACCOUNTS_SETUP.sql script
+run spool rage_schema_setup.log  ( so that a log file can be setup for RAGEV15) and once we are done run (spool off) at the end.
+run set define off
+run @RAGEV15_DDL.sql
+Run the following cmd: select count(*),object_type from user_objects group by object_type order by 2;
+conn RAGE_EXTRACTION/RAGE_EXTRACTION@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=dbpt.cbf4wuejqef3.us-east-1.rds.amazonaws.com)(PORT=1521))(CONNECT_DATA=(SID=DBPT)))
+run spool rage_schema_setup.log  ( so that a log file can be setup for RAGEV15) and once we are done run (spool off) at the end.
+run set define off
+select object_type,count(*) from user_objects group by object_type;
+
+XCE Schema Setup :::
+
+Connect through database via admin
+conn pvai/MyPassword@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=dbml.cejzyzh4tgk7.us-east-1.rds.amazonaws.com)(PORT=1521))(CONNECT_DATA=(SID=DBML)))
+run the file @PVAIXCE_ACCOUNT_SETUP.sql script
+Need to enter the values : 
+Enter value for xceschema: PVAIXCE
+Enter value for xceschemapass: PVAIXCE
+Enter value for tbs: 1
+Enter value for tmptbs: TEMP
+
+conn PVAIXCE/PVAIXCE@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=dbpt.cbf4wuejqef3.us-east-1.rds.amazonaws.com)(PORT=1521))(CONNECT_DATA=(SID=DBPT)))
+run @setup_Account
+enter the values : PVAIXCE , PVAIXCE, USERS, tempfs
+Connect through sqldatabase through sqldeveloper software to import 2 excel files and login with pvaixce database
+select object_type,count(*) from user_objects group by object_type;
+commit;  ( In order to save the changes made under the mysql after running .sql )

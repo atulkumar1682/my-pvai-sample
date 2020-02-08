@@ -1,0 +1,50 @@
+ 1044  ansible-playbook -v harden-amazon-linux-servers.yml -i environments/dev/hosts
+ 1045  vi environments/dev/hosts
+ 1046  ping 10.12.2.27
+ 1047  ansible-playbook -v harden-amazon-linux-servers.yml -i environments/dev/hosts
+ 1048  cd environments/
+ 1049  ll
+ 1050  cd ..
+ 1051  vi harden-amazon-linux-servers.yml
+ 1052  cd roles/
+ 1053  ll
+ 1054  cd ansible-os-hardening/
+ 1055  cd ..
+ 1056  ll
+ 1057  cd environments/
+ 1058  ls
+ 1059  cp -R dev/ ml
+ 1060  ll
+ 1061  cd ml
+ 1062  ll
+ 1063  vi hosts
+ 1064  cd ..
+ 1065  ansible sbd-servers -m ping -i environments/ml/hosts -u centos
+ 1066  ansible-playbook -v harden-amazon-linux-servers.yml -i environments/ml/hosts
+ 1067  cd roles/
+ 1068  cd ..
+ 1069  ll
+ 1070  vi install-filebeat.yml
+ 1071  cd environments/ml/
+ 1072  cd group_vars/
+ 1073  ll
+ 1074  rm -f ui-servers-demo.yml
+ 1075  mv ui-servers.yml cor-servers.yml
+ 1076  ll
+ 1077  rm -f xce-servers.yml
+ 1078  rm -f epel-release-latest-7.noarch.rpm
+ 1079  ll
+ 1080  vi sbd-servers.yml
+ 1081  cd ..
+ 1082  ansible-playbook -v install-filebeat.yml -i environments/ml/hosts
+ 1083  cd roles/
+ 1084  cd filebeat/
+ 1085  ls
+ 1086  vi defaults/main.yml
+ 1087  cd ..
+ 1088  ansible-playbook -v install-filebeat.yml -i environments/ml/hosts
+ 
+ 
+ AWS Agent service verification : 
+ 
+ sudo /opt/aws/awsagent/bin/awsagent status   ( to get the status for aws agent service on linux machine )

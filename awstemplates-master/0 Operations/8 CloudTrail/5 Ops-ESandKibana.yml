@@ -1,0 +1,105 @@
+#------------------------------------------------------------------------------------#
+##  Copyright © Genpact 2018. All Rights Reserved.                                  ##
+##  Ltd trading as G in NYSE - Registered in US.                                    ##
+##  Registered Office - Canon's Court, 22 Victoria Street HAMILTON, HM 12, Bermuda. ##
+#------------------------------------------------------------------------------------#
+## Author = 'Sandeep Kumar  (Genpact Limited)'                                     ##
+## Version = '1.0.3'                                                                ##
+## Date = 27-Nov-2018                                                                ##
+#------------------------------------------------------------------------------------#
+AWSTemplateFormatVersion: 2010-09-09
+Description: Elastic Search Cluster Creation for Cloud Trail Events - Operations VPC
+#Define the parameters for the CF Stack
+Parameters:
+    Region: 
+        Description: AWS Region
+        Default: Primary
+        Type: String
+        AllowedValues: 
+           - Primary
+           - Secondary
+        ConstraintDescription: Select the Region for creation.
+# Instance Type for Elastic Search Cluster - can be selected as per requirement        
+    InstanceType:
+        Description: Instance Type
+        Default: m4.large
+        Type: String
+        AllowedValues: [ m4.large, m4.2xlarge ]
+# ElasticSearch Version
+    ESVersion:
+        Description: ES Version
+        Default: 6.3
+        Type: String
+# Instance Count for Elastic Search Cluster - can be selected as per requirement   
+    InstanceCount:
+        Description: Instance Count
+        Default: 2
+        Type: String
+        AllowedPattern: ^[0-9/]*$
+# Master Instance Count for Elastic Search Cluster - can be selected as per requirement   
+    MasterInstanceCount:
+        Description: Dedicated Master Instance Count
+        Default: 2
+        Type: String
+        AllowedPattern: ^[0-9/]*$
+# EBS Volume Size for Elastic Search Cluster Instance - can be selected as per requirement   
+    VolumeSize:
+        Description: Volume Size
+        Default: 100
+        Type: String
+        AllowedPattern: ^[0-9/]*$
+# EBS Volume Type for Elastic Search Cluster Instance - can be selected as per requirement   
+    VolumeType:
+        Description: Volume Type
+        Default: gp2
+        Type: String
+        AllowedValues: [ gp2, io1, standard ]
+# EBS Volume IOPS for Elastic Search Cluster Instance - can be selected as per requirement   
+    VolumeIOPS:
+        Description: Volume IOPS Unit
+        Default: 300
+        Type: String
+        AllowedPattern: ^[0-9/]*$
+# Zone Awareness for HA
+    ZoneAwarenessEnabled:
+        Description: whether to enable zone awareness for ES
+        Default: true
+        Type: String
+        AllowedValues: [ true, false]
+
+
+# define conditions for creating resources in different regions        
+Conditions:
+  CreateResourcesInPrimary: !Equals [ !Ref Region, "Primary" ]
+  CreateResourcesInSecondary: !Equals [ !Ref Region, "Secondary" ]
+  CreateIOVolume: !Equals [ !Ref VolumeType, "io1" ]
+
+
+Resources:
+  ElasticSearch:
+   Type: "AWS::Elasticsearch::Domain"
+   Properties:
+    DomainName: !Sub pvai-cloudtrail-logs
+    ElasticsearchVersion: !Ref ESVersion
+    ElasticsearchClusterConfig: 
+      DedicatedMasterEnabled: "true"
+      InstanceCount: !Ref MasterInstanceCount
+      ZoneAwarenessEnabled: !Ref ZoneAwarenessEnabled
+      InstanceType: !Sub ${InstanceType}.elasticsearch
+      DedicatedMasterType: !Sub ${InstanceType}.elasticsearch
+      DedicatedMasterCount: !Ref MasterInstanceCount
+    EBSOptions: 
+      EBSEnabled: 'true'
+      Iops: !If [CreateIOVolume, !Ref VolumeIOPS, 0]
+      VolumeSize: !Ref VolumeSize
+      VolumeType: !Ref VolumeType
+    SnapshotOptions: 
+      AutomatedSnapshotStartHour: "0"
+    AdvancedOptions: 
+      rest.action.multi.allow_explicit_index: "true"
+    VPCOptions:
+        SecurityGroupIds: 
+          - !If [CreateResourcesInPrimary, !ImportValue vpcsg1A, !If [CreateResourcesInSecondary, !ImportValue vpcsg1B,""]]
+        SubnetIds:
+          - !If [CreateResourcesInPrimary, !ImportValue subnet13bA, !If [CreateResourcesInSecondary, !ImportValue subnet13bB,""]]
+          - !If [CreateResourcesInPrimary, !ImportValue subnet14bA, !If [CreateResourcesInSecondary, !ImportValue subnet14bB,""]]

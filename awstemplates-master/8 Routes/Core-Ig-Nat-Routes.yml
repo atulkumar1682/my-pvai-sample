@@ -1,0 +1,275 @@
+#------------------------------------------------------------------------------------#
+## Copyright © Genpact 2018. All Rights Reserved.                                   ##
+## Ltd trading as G in NYSE - Registered in US.                                     ##
+## Registered Office - Canon's Court, 22 Victoria Street HAMILTON, HM 12, Bermuda.  ##
+#------------------------------------------------------------------------------------#
+## Author = 'Vivek Trivedi (Genpact Limited)'                                       ##
+## Version = '1.0.0'                                                                ##
+## Date = 6-Apr-2018                                                                ##
+#------------------------------------------------------------------------------------#
+AWSTemplateFormatVersion: 2010-09-09
+Description: Core IG - NAT Routes for All Regions.
+Parameters:
+    Region: 
+        Description: AWS Region
+        Default: N-Virginia(us-east-1)
+        Type: String
+        AllowedValues: 
+           - N-Virginia(us-east-1)
+           - Ireland(eu-west-1)
+        ConstraintDescription: Select the Region for creation.
+    EnvType: 
+        Description: Environment Type
+        Default: DEV/ML
+        Type: String
+        AllowedValues: 
+           - DEV/ML
+           - SIT
+           - VAL/PROD
+           - UserTraining
+           - PerformanceTesting
+        ConstraintDescription: Select the Environment for Creation.
+Conditions: 
+  CreateCondition1A: !And
+        - !Equals [ !Ref EnvType, DEV/ML ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition2A: !And
+        - !Equals [ !Ref EnvType, SIT ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition0A: !And
+        - !Equals [ !Ref EnvType, VAL/PROD ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition0B: !And
+        - !Equals [ !Ref Region, Ireland(eu-west-1) ]
+        - !Equals [ !Ref EnvType, VAL/PROD ]
+  CreateCondition3A: !And
+        - !Equals [ !Ref EnvType, UserTraining ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition4A: !And
+        - !Equals [ !Ref EnvType, PerformanceTesting ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+Resources:
+  routevpc2ig1A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition1A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc2rt1a1A
+      GatewayId: !ImportValue vpc2ig1A
+
+  routevpc2ig2A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition2A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc2rt1a2A
+      GatewayId: !ImportValue vpc2ig2A
+
+  routevpc2ig0A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc2rt1a0A
+      GatewayId: !ImportValue vpc2ig0A
+      
+  routevpc2ig0B:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0B
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc2rt1a0B 
+      GatewayId: !ImportValue vpc2ig0B
+      
+  routevpc2ig3A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition3A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc2rt1a3A 
+      GatewayId: !ImportValue vpc2ig3A
+
+  routevpc2ig4A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition4A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc2rt1a4A
+      GatewayId: !ImportValue vpc2ig4A
+
+  routevpc3ig1A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition1A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc3rt1a1A
+      GatewayId: !ImportValue vpc3ig1A
+      
+  routevpc3ig2A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition2A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc3rt1a2A
+      GatewayId: !ImportValue vpc3ig2A
+      
+  routevpc3ig0A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc3rt1a0A
+      GatewayId: !ImportValue vpc3ig0A
+      
+  routevpc3ig0B:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0B
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc3rt1a0B
+      GatewayId: !ImportValue vpc3ig0B
+      
+  routevpc3ig3A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition3A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc3rt1a3A
+      GatewayId: !ImportValue vpc3ig3A
+      
+  routevpc3ig4A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition4A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc3rt1a4A
+      GatewayId: !ImportValue vpc3ig4A      
+
+  routenatgatewayvpc21A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition1A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc2rt2b1A
+      NatGatewayId: !ImportValue natgatewayvpc21A
+
+  routenatgatewayvpc22A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition2A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc2rt2b2A 
+      NatGatewayId: !ImportValue natgatewayvpc22A
+
+
+  routenatgatewayvpc20Ax:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc2rt2b0A
+      NatGatewayId: !ImportValue natgatewayvpc20Ax
+
+  # routenatgatewayvpc20Ay:
+    # Type: 'AWS::EC2::Route'
+    # Condition: CreateCondition0A
+    # Properties:
+      # DestinationCidrBlock: 0.0.0.0/0
+      # RouteTableId: !ImportValue vpc2rt2b0A
+      # NatGatewayId: !ImportValue natgatewayvpc20Ay
+
+  routenatgatewayvpc20Bx:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0B
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc2rt2b0B
+      NatGatewayId: !ImportValue natgatewayvpc20Bx
+
+  # routenatgatewayvpc20By:
+    # Type: 'AWS::EC2::Route'
+    # Condition: CreateCondition0B
+    # Properties:
+      # DestinationCidrBlock: 0.0.0.0/0
+      # RouteTableId: !ImportValue vpc2rt2b0B
+      # NatGatewayId: !ImportValue natgatewayvpc20By
+
+  routenatgatewayvpc23A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition3A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc2rt2b3A
+      NatGatewayId: !ImportValue natgatewayvpc23A
+      
+  routenatgatewayvpc24A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition4A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc2rt2b4A
+      NatGatewayId: !ImportValue natgatewayvpc24A
+
+  routenatgatewayvpc31A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition1A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc3rt2b1A
+      NatGatewayId: !ImportValue natgatewayvpc31A
+      
+  routenatgatewayvpc32A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition2A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc3rt2b2A
+      NatGatewayId: !ImportValue natgatewayvpc32A
+       
+  routenatgatewayvpc30Ax:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc3rt2b0A
+      NatGatewayId: !ImportValue natgatewayvpc30Ax
+      
+  # routenatgatewayvpc30Ay:
+    # Type: 'AWS::EC2::Route'
+    # Condition: CreateCondition0A
+    # Properties:
+      # DestinationCidrBlock: 0.0.0.0/0
+      # RouteTableId: !ImportValue vpc3rt2b0A 
+      # NatGatewayId: !ImportValue natgatewayvpc30Ay
+    
+  routenatgatewayvpc30Bx:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0B
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc3rt2b0B
+      NatGatewayId: !ImportValue natgatewayvpc30Bx
+     
+  # routenatgatewayvpc30By:
+    # Type: 'AWS::EC2::Route'
+    # Condition: CreateCondition0B
+    # Properties:
+      # DestinationCidrBlock: 0.0.0.0/0
+      # RouteTableId: !ImportValue vpc3rt2b0B
+      # NatGatewayId: !ImportValue natgatewayvpc30By
+      
+  routenatgatewayvpc33A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition3A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc3rt2b3A
+      NatGatewayId: !ImportValue natgatewayvpc33A
+    
+  routenatgatewayvpc34A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition4A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc3rt2b4A
+      NatGatewayId: !ImportValue natgatewayvpc34A

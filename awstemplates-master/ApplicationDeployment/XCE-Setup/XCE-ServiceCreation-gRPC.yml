@@ -1,0 +1,546 @@
+---
+# -------------------------------------------------------------------------------------------------
+#
+#     Copyright © Genpact 2018. All Rights Reserved.
+#     Ltd trading as G in NYSE - Registered in US.
+#     Registered Office - Canon's Court, 22 Victoria Street HAMILTON, HM 12, Bermuda.
+#
+# -------------------------------------------------------------------------------------------------
+## author = 'Sandeep Kumar (Genpact Limited)'
+## ver = '1.0.0'
+## date = 28-Apr-2018
+# -------------------------------------------------------------------------------------------------
+## modified_by = 'Sandeep Kumar (Genpact Limited)'
+## ver = '1.0.1'
+## changes = "--sysctl parameter added in docker deployment"
+## date = 14-Jun-2018
+# -------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------
+## modified_by = 'Sandeep Kumar (Genpact Limited)'
+## ver = '1.0.2'
+## changes = "EBS Optimized"
+## date = 14-Aug-2018
+# -------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------
+## modified_by = 'Sandeep Kumar (Genpact Limited)'
+## ver = '1.0.3'
+## changes = "New Parameters added to fix RedisCluster connectivity issue"
+## date = 17-Aug-2018
+# -------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------
+## modified_by = 'Sandeep Kumar (Genpact Limited)'
+## ver = '1.0.4'
+## changes = "More Instance Types added to have more flexibility to choose"
+## date = 14-Feb-2019
+# -------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------
+## modified_by = 'Sandeep Kumar (Genpact Limited)'
+## ver = '1.0.5'
+## changes = "Base AMI to be used instead of encrypted one and encryption on the fly for the volumes"
+##           "Addition of filebeat.yml"
+## date = 19-Jul-2019
+# -------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------
+## modified_by = 'Atul Kumar (Genpact Limited)'
+## ver = '1.0.6'
+## changes = "Add new environment name sit2"
+## date = 20-JAN-2020
+# -------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------
+## modified_by = 'Atul Kumar (Genpact Limited)'
+## ver = '1.0.7'
+## changes = "Add new parameter envname"
+## date = 29-JAN-2020
+# -------------------------------------------------------------------------------------------------
+
+
+AWSTemplateFormatVersion: 2010-09-09
+Description: Creates XCE service resources NLB, TargetGroup, ASG & LC etc and Docker Service Deployment
+
+Parameters:
+    Prefix:
+        Description: Prefix Value
+        Default: pvai
+        Type: String
+    Region:
+        Description: AWS Region
+        Default: N-Virginia(us-east-1)
+        Type: String
+        AllowedValues:
+           - N-Virginia(us-east-1)
+           - Ireland(eu-west-1)
+        ConstraintDescription: Select the AWS Region.
+    EnvType:
+        Description: Environment Type
+        Default: prod
+        Type: String
+        AllowedValues: [ dev, ml, pt, ut, sit, val, prod, sit2 ]
+        ConstraintDescription: Select the Environment for Creation.
+    EnvName:
+        Default: sit2
+        Type: String
+        Description: Set a custom Environment Name as per your requirement.
+    AMI:
+        Description: AMI for EC2 Instance
+        Default: ami-097b059febcdd2047
+        Type: String        
+    InstanceType:
+        Description: Instance Type
+        Default: c5.xlarge
+        Type: String
+        AllowedValues: [ t2.small, t2.medium, t3.micro, t3.small, t3.medium, t3.large, c5.large, c5.xlarge, c5.2xlarge, c4.large, c4.xlarge ]
+        ConstraintDescription: Select the Instance Type for EC2.
+    KeyName:
+        Description: Name of an existing EC2 KeyPair to enable SSH access to the instance.
+        Type: 'AWS::EC2::KeyPair::KeyName'
+        Default: pvai-pfizer-test
+    InstanceProfile:
+        Description: Instance Role
+        Default: ec2-xce-docker-service
+        Type: String
+    DesiredCapacity:
+       Description: EC2 Instance Desired for Service
+       Type: Number
+       Default: 1
+       ConstraintDescription: 'Must be in the range [1-10]'
+       MinValue: 1
+       MaxValue: 10
+    RootVolumeSize:
+       Description: Volume Size for the EC2 Instance
+       Type: Number
+       Default: 30
+       ConstraintDescription: 'Must be in the range [30-100]'
+       MinValue: 30
+       MaxValue: 100
+    Service:
+       Description: Name of xce-application service
+       Type: String
+       Default: xce-datastore
+       AllowedValues:
+           - xce-datastore #ServicePort - 50051
+           - xce-learningstore #ServicePort - 50053
+           - xce-ocrextraction #ServicePort - 50081
+           - xce-sourcetype #ServicePort - 50092
+           - xce-sparkbeyond #ServicePort - 50091
+           - xce-ensemble #ServicePort - 50078
+           - xce-datatransmit #ServicePort - 50055
+           - xce-orchestration #ServicePort - 50061
+           - xce-loadbalancer #ServicePort - 50059
+    ServicePort:
+       Description: Port being used to hit the Service
+       Type: String
+       Default: 50051
+       AllowedPattern: ^[0-9/]*$
+    # dev account where docker images are pushed to ECR       
+    RegistryAccount:
+       Description: AWS Account ID for ECR
+       Type: String
+       Default: 795974515125 
+       AllowedPattern: ^[0-9/]*$
+    ServiceRepoAccount:
+       Description: ECR Account Name for the Service
+       Type: String
+       Default: pvai-dev
+    ImageTag:
+       Description: Image Tag for the Service
+       Type: String
+       Default: 1.0
+    S3DeploymentBucket:
+        Description: S3 Bucket for Package / Config files location 
+        Default: "pvai-pfizer-deployment"
+        Type: String
+    # Major and Minor releases
+    MajorRelease:
+      Description: Major version of the Product
+      Type: String
+      Default: "Release1.0.3"
+    AccountName:
+      Description: AWS Account name
+      Type: String
+      Default: "pfizer"
+    MinorRelease:
+      Description: Minor version of the application
+      Type: String
+      Default: "103GA"
+    BuildNumber:
+      Description: BuildNumber of Core-App application
+      Type: String
+      Default: "330"
+    PackagePath:
+       Description: Path for XCE Image tar file
+       Type: String
+       Default: "dockerimages"
+    App:
+       Description: Application Name
+       Type: String
+       Default: "xce"
+ # BEGIN Environment Variables for the Services
+    # log path location from docker container Instance
+    LogPath:
+       Description: Log Path location from Docker Container Instance
+       Type: String
+       Default: /var/log/xce/
+    # log path location from application inside docker container
+    InternalLogPath:
+       Description: Log Path location Inside Docker Container
+       Type: String
+       Default: /var/log/xce/
+    # Max Workers for service execution
+    MaxWorkers:
+       Description: Maximum Workers for Service
+       Type: String
+       Default: 100
+       AllowedPattern: ^[0-9/]*$
+    DBUser:
+       Description: Oracle DataBase User ID
+       Type: String
+       Default: PVAIXCE
+    DBPwd:
+       Description: Oracle DataBase Password
+       Type: String
+       Default: XXXXX
+       NoEcho: True
+    DBServiceName:
+       Description: Oracle DB Name
+       Type: String
+       Default: DBSIT2   
+    SBPredBoxKey:
+       Description: SparkBeyond Prediction Box Key
+       Type: String
+       Default: XXXXX
+       NoEcho: True
+    SBPredBoxEndPoint:
+       Description: SparkBeyond Prediction Box End Point
+       Type: String
+       Default: /predbox/groups/group
+    S3DataBucket:
+       Description: S3 Bucket to be used for SourceType Service
+       Type: String
+       Default: pvai-pfizer-sit2-primary-data
+# BEGIN - new parameters to fix RedisCluster connectivity issue
+# MAX_REDIS_CONNECTIONS
+    MaxRedisConnections:
+       Description: Maximum Redis Connection for the Service
+       Type: String
+       Default: 200
+# ORCHESTRATOR_CONNECTION_RETRY
+    OrchestratorConnectionRetry:
+       Description: OrchestratorConnectionRetry for the LoadBalancer Service
+       Type: String
+       Default: 3
+# REFRESH_MINUTES
+    RefreshMinutes:
+       Description: Refresh Minutes for the LoadBalancer Service
+       Type: String
+       Default: 480
+# END - new parameters to fix RedisCluster connectivity issue
+
+    JobQueueThreshold:
+       Description: Job Queue Threshold
+       Type: String
+       Default: "1:15:1"
+    ThreadThreshold:
+       Description: Thread Threshold
+       Type: String
+       Default: "1:17:2"
+    OrchestratorTimeOut:
+       Description: Orchestration Timeout
+       Type: Number
+       Default: 1800
+    MaxRetry:
+       Description: maximum try for load balancer
+       Type: Number
+       Default: 4
+    RealTimeDeference:
+       Description: real time deference
+       Type: Number
+       Default: 10
+    DefaultTimeDeference:
+       Description: default time deference
+       Type: Number
+       Default: 5       
+  # END.. Environment Variables for the Services       
+    CIDR:
+       Description: IP range for the security group
+       Type: String
+       Default: 10.0.0.0/8  
+    LoadBalancerDeregistrationDelay:
+       Description: Wait time (in sec) for changing the state of a deregistering target
+       Type: Number
+       Default: 30
+       ConstraintDescription: 'Must be in the range [0-600]'
+       MinValue: 0
+       MaxValue: 600
+    HostedZoneResource:
+       Description: Private DNS
+       Type: String
+       Default: local.
+    # Service specific parameters; primarily being used 
+    # as Environment Variables
+    
+# Create condition based on the service selected;
+# Condition will be used in 'AWS::CloudFormation::Init' for LaunchConfiguration
+Conditions:
+  RunDataStoreService: !Equals [!Ref Service, "xce-datastore"]
+  RunLearningStoreService: !Equals [!Ref Service, "xce-learningstore"]
+  RunSparkBeyondService: !Equals [!Ref Service, "xce-sparkbeyond"]
+  RunSourceTypeService: !Equals [!Ref Service, "xce-sourcetype"]
+  RunOcrExtractionService: !Equals [!Ref Service, "xce-ocrextraction"]
+  RunEnsembleService: !Equals [!Ref Service, "xce-ensemble"]
+  RunOrchestrationService: !Equals [!Ref Service, "xce-orchestration"]
+  RunDataTransmitService: !Equals [!Ref Service, "xce-datatransmit"]
+  RunLoadBalancerService: !Equals [!Ref Service, "xce-loadbalancer"]
+  # Create condition based on the Environment selected;
+  # To fetch the VPC and Subnet values based on the condition
+  GetDevNetworkValues: !And
+       - !Equals [ !Ref EnvType, "dev" ]
+       - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  GetMLNetworkValues: !And
+       - !Equals [ !Ref EnvType, "ml"]
+       - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  GetPTNetworkValues: !And
+       - !Equals [ !Ref EnvType, "pt"]
+       - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  GetUTNetworkValues: !And
+       - !Equals [ !Ref EnvType, "ut"]
+       - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  GetSITNetworkValues: !And
+       - !Equals [ !Ref EnvType, "sit"]
+       - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  GetSIT2NetworkValues: !And
+       - !Equals [ !Ref EnvType, "sit2"]
+       - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  GetValNetworkValues: !And
+       - !Equals [ !Ref EnvType, "val"]
+       - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  GetProdNetworkValues: !And
+       - !Equals [ !Ref EnvType, "prod"]
+       - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  GetProdNetworkValuesIreland: !And
+       - !Equals [ !Ref EnvType, "prod"]
+       - !Equals [ !Ref Region, Ireland(eu-west-1) ]
+  GetValNetworkValuesIreland: !And
+       - !Equals [ !Ref EnvType, "val"]
+       - !Equals [ !Ref Region, Ireland(eu-west-1) ]
+
+Resources:
+  sg:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Security Groups for Auto Scaling Configuration of ML
+      GroupName: !Sub ${Prefix}-${EnvName}-${Service}-vpc3
+      # Fetch the VPC based on the condition as per Environment selected
+      VpcId: !If [GetValNetworkValues, !ImportValue vpc30A, !If [GetProdNetworkValues, !ImportValue vpc30A, !If [GetDevNetworkValues, !ImportValue vpc31A, !If [GetMLNetworkValues, !ImportValue vpc31A, !If [GetPTNetworkValues, !ImportValue vpc34A, !If [GetUTNetworkValues, !ImportValue vpc33A, !If [GetSITNetworkValues, !ImportValue vpc32A, !If [GetSIT2NetworkValues, !ImportValue vpc32A, !If [GetProdNetworkValuesIreland,!ImportValue vpc30B, !If [GetValNetworkValuesIreland, !ImportValue vpc30B, ""]]]]]]]]]]
+      Tags:
+        - Key: Name
+          Value: !Sub ${Prefix}-${EnvName}-${Service}-vpc3
+
+  sgingress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref sg
+      IpProtocol: '-1'
+      CidrIp: !Ref CIDR
+
+  launchconfig:
+    Type: 'AWS::AutoScaling::LaunchConfiguration'
+    Metadata:
+      'AWS::CloudFormation::Init':
+        config:
+          # Just for testing purpose to debug if file is created or not
+          files:
+            /tmp/test.txt:
+              content: Hello world!
+              mode: '000755'
+              owner: root
+              group: root
+          commands:
+            # To download the tar file
+            01_downloadtarfile:
+              command: !Sub "aws s3 cp s3://${S3DeploymentBucket}/${MajorRelease}/${AccountName}/${MinorRelease}/${BuildNumber}/${App}/${PackagePath}/${Service}.tar ."
+              cwd: "~"
+              ignoreErrors: "false"
+            # To load the image based on the parameter values like ECR account, Service Repo and Image Tag
+            02_loadimage:
+              command: !Sub "docker load --input ${Service}.tar"
+              cwd: "~"
+              ignoreErrors: "false"
+            # download filebeat yml file and restart the service
+            03_download_filebeat_file:
+              command: !Sub "aws s3 cp s3://${S3DeploymentBucket}/${MajorRelease}/${AccountName}/${MinorRelease}/${BuildNumber}/${App}/${EnvName}/filebeat.yml /etc/filebeat/ --region ${AWS::Region} && service filebeat restart"
+              cwd: "~"
+              ignoreErrors: "false"
+            # Docker container running commands based on the selected Service
+            # Which depends on the Condition defined
+            04:rundocker:
+              command: !If [RunDataStoreService, !Sub "docker run --sysctl net.ipv4.tcp_keepalive_time=240 --sysctl net.ipv4.tcp_keepalive_probes=20 -p${ServicePort}:${ServicePort} -eREDIS_HOST=${Prefix}-${EnvName}-redis-cache-01.${HostedZoneResource} -eREDIS_PORT=6379 -eINTERNAL_LOG_PATH=${LogPath} -eMAX_REDIS_CONNECTIONS=${MaxRedisConnections} -eMAX_WORKERS=${MaxWorkers} -v ${LogPath}:${InternalLogPath} -d ${RegistryAccount}.dkr.ecr.us-east-1.amazonaws.com/${ServiceRepoAccount}-${Service}-ecr:${ImageTag}", !If [RunLearningStoreService, !Sub "docker run --sysctl net.ipv4.tcp_keepalive_time=240 --sysctl net.ipv4.tcp_keepalive_probes=20 -p${ServicePort}:${ServicePort} -eDB_HOST=${Prefix}-${EnvName}-oracle-rds-01.local -eDB_PORT=1521 -eDB_USER=${DBUser} -eDB_PASSWORD=${DBPwd} -eDB_SERVICE_NAME=${DBServiceName} -eINTERNAL_LOG_PATH=${InternalLogPath} -eMAX_WORKERS=${MaxWorkers} -v ${LogPath}:${InternalLogPath} -d ${RegistryAccount}.dkr.ecr.us-east-1.amazonaws.com/${ServiceRepoAccount}-${Service}-ecr:${ImageTag}", !If [RunSparkBeyondService, !Sub "docker run --sysctl net.ipv4.tcp_keepalive_time=240 --sysctl net.ipv4.tcp_keepalive_probes=20 -p${ServicePort}:${ServicePort} -eRAGE_MODULE_ID='RAGE' -eDATA_STORE_ENDPOINT=${Prefix}-${EnvName}-xce-datastore-nlb.${HostedZoneResource}:50051 -eLEARNING_STORE_ENDPOINT=${Prefix}-${EnvName}-xce-learningstore-nlb.${HostedZoneResource}:50053 -eSOURCE_TYPE_MODULE_ID='com.pvai.xce.etl.SourceTypeClassifier' -eSB_PRED_BOX_URL=http://${Prefix}-${EnvName}-sbp-elb.${HostedZoneResource} -eSB_PRED_BOX_KEY='${SBPredBoxKey}' -eSB_PRED_BOX_ENDPOINT=${SBPredBoxEndPoint} -eDB_HOST=${Prefix}-${EnvName}-oracle-rds-01.${HostedZoneResource} -eDB_PORT=1521 -eDB_USER=${DBUser} -eDB_PASSWORD=${DBPwd} -eDB_SERVICE=${DBServiceName} -eINTERNAL_LOG_PATH=${InternalLogPath} -eMAX_WORKERS=${MaxWorkers} -eDB_BLOB='True' -v ${LogPath}:${InternalLogPath} --name sparkbeyondservice -d ${RegistryAccount}.dkr.ecr.us-east-1.amazonaws.com/${ServiceRepoAccount}-${Service}-ecr:${ImageTag}", !If [RunSourceTypeService, !Sub "docker run --sysctl net.ipv4.tcp_keepalive_time=240 --sysctl net.ipv4.tcp_keepalive_probes=20 -p${ServicePort}:${ServicePort} -eRAGE_MODULE_ID='RAGE' -eDATA_STORE_ENDPOINT=${Prefix}-${EnvName}-xce-datastore-nlb.${HostedZoneResource}:50051 -eLEARNING_STORE_ENDPOINT=${Prefix}-${EnvName}-xce-learningstore-nlb.${HostedZoneResource}:50053 -eS3_BUCKET=${S3DataBucket} -eINTERNAL_LOG_PATH=${InternalLogPath} -eMAX_WORKERS=${MaxWorkers} -v /tmp:/usr/src/app/sourcetypeclassifier_service/tmp -v ${LogPath}:${InternalLogPath} --name sourcetypeservice -d ${RegistryAccount}.dkr.ecr.us-east-1.amazonaws.com/${ServiceRepoAccount}-${Service}-ecr:${ImageTag}", !If [RunOcrExtractionService, !Sub "docker run --sysctl net.ipv4.tcp_keepalive_time=240 --sysctl net.ipv4.tcp_keepalive_probes=20 -p${ServicePort}:${ServicePort} -eRAGE_MODULE_ID='RAGE' -eRAGE_URL=http://${Prefix}-${EnvName}-rge-elb.${HostedZoneResource}:8080/Handler/rage/rageApis/invokeProcessbyName -eMAX_WORKERS=${MaxWorkers} -eDATA_STORE_ENDPOINT=${Prefix}-${EnvName}-xce-datastore-nlb.${HostedZoneResource}:50051 -eINTERNAL_LOG_PATH=${InternalLogPath} -v ${LogPath}:${InternalLogPath} -d ${RegistryAccount}.dkr.ecr.us-east-1.amazonaws.com/${ServiceRepoAccount}-${Service}-ecr:${ImageTag} /opt/jboss/gRPC/runServer.sh", !If [RunEnsembleService, !Sub "docker run --sysctl net.ipv4.tcp_keepalive_time=240 --sysctl net.ipv4.tcp_keepalive_probes=20 -p${ServicePort}:${ServicePort} -eDATA_STORE_ENDPOINT=${Prefix}-${EnvName}-xce-datastore-nlb.${HostedZoneResource}:50051 -eLEARNING_STORE_ENDPOINT=${Prefix}-${EnvName}-xce-learningstore-nlb.${HostedZoneResource}:50053 -eSERVER_PORT=${ServicePort} -eDB_HOST=${Prefix}-${EnvName}-oracle-rds-01.local -eDB_PORT=1521 -eDB_USER=${DBUser} -eDB_PASSWORD=${DBPwd} -eMAX_WORKERS=${MaxWorkers} -eDB_SERVICE_NAME=${DBServiceName} -eINTERNAL_LOG_PATH=${InternalLogPath} -v ${LogPath}:${InternalLogPath} -d ${RegistryAccount}.dkr.ecr.us-east-1.amazonaws.com/${ServiceRepoAccount}-${Service}-ecr:${ImageTag}", !If [RunOrchestrationService, !Sub "docker run --sysctl net.ipv4.tcp_keepalive_time=240 --sysctl net.ipv4.tcp_keepalive_probes=20 -p${ServicePort}:${ServicePort} -eDATA_STORE_ENDPOINT=${Prefix}-${EnvName}-xce-datastore-nlb.${HostedZoneResource}:50051 -eINTERNAL_LOG_PATH=${InternalLogPath} -v ${LogPath}:${InternalLogPath}  -eREDIS_HOST=${Prefix}-${EnvName}-redis-cache-01.${HostedZoneResource} -eREDIS_PORT=6379 -eSERVICE_REGISTRY=${EnvName}_service_registry -eMAX_REDIS_CONNECTIONS=${MaxRedisConnections} -eMAX_WORKERS=${MaxWorkers} -eTIMEOUT=${OrchestratorTimeOut} -d ${RegistryAccount}.dkr.ecr.us-east-1.amazonaws.com/${ServiceRepoAccount}-${Service}-ecr:${ImageTag}", !If [RunDataTransmitService, !Sub "docker run --sysctl net.ipv4.tcp_keepalive_time=240 --sysctl net.ipv4.tcp_keepalive_probes=20 -p${ServicePort}:${ServicePort} -eDATA_STORE_ENDPOINT=${Prefix}-${EnvName}-xce-datastore-nlb.${HostedZoneResource}:50051 -eREDIS_HOST=${Prefix}-${EnvName}-redis-cache-01.local -eREDIS_PORT=6379 -eDB_HOST=${Prefix}-${EnvName}-oracle-rds-01.local  -eDB_PORT=1521 -eDB_USER=${DBUser} -eDB_PASSWORD=${DBPwd} -eDB_SERVICE_NAME=${DBServiceName} -eMAX_REDIS_CONNECTIONS=${MaxRedisConnections} -eMAX_WORKERS=${MaxWorkers} -eINTERNAL_LOG_PATH=${InternalLogPath} -v ${LogPath}:${InternalLogPath} -d ${RegistryAccount}.dkr.ecr.us-east-1.amazonaws.com/${ServiceRepoAccount}-${Service}-ecr:${ImageTag}", !If [RunLoadBalancerService, !Sub "docker run --sysctl net.ipv4.tcp_keepalive_time=240 --sysctl net.ipv4.tcp_keepalive_probes=20 -p${ServicePort}:${ServicePort} -eREDIS_HOST=${Prefix}-${EnvName}-redis-cache-01.${HostedZoneResource} -eREDIS_PORT=6379 -eORCHESTRATOR_ENDPOINT=${Prefix}-${EnvName}-xce-orchestration-nlb.${HostedZoneResource}:50061 -eMAX_REDIS_CONNECTIONS=${MaxRedisConnections}  -eORCHESTRATOR_CONNECTION_RETRY=${OrchestratorConnectionRetry} -eREFRESH_MINUTES=${RefreshMinutes} -eJOB_QUEUE_THRESHOLDS=${JobQueueThreshold} -eTHREAD_THRESHOLDS=${ThreadThreshold} -eMAX_RETRY=${MaxRetry} -eREAL_TIME_DEFERENCE=${RealTimeDeference} -eDEFAULT_TIME_DEFERENCE=${DefaultTimeDeference} -eORCHESTRATOR_TIMEOUT=${OrchestratorTimeOut} -eMAX_WORKERS=${MaxWorkers} -eINTERNAL_LOG_PATH=${InternalLogPath} -v ${LogPath}:${InternalLogPath} -d ${RegistryAccount}.dkr.ecr.us-east-1.amazonaws.com/${ServiceRepoAccount}-${Service}-ecr:${ImageTag}", ""]]]]]]]]]
+              cwd: "~"
+              ignoreErrors: "false"
+              
+    # Properties for LaunchConfiguration and Instance to be created from LaunchConfiguration
+    Properties:
+      ImageId: !Ref AMI
+      InstanceType: !Ref InstanceType
+      EbsOptimized: "true"
+      KeyName: !Ref KeyName
+      IamInstanceProfile: !Ref InstanceProfile
+      InstanceMonitoring: 'true'
+      AssociatePublicIpAddress: 'false'
+      SecurityGroups:
+        - !Ref sg
+      # Mapping of root mount point to the server
+      BlockDeviceMappings: 
+        - DeviceName: "/dev/xvda"
+          Ebs: 
+            VolumeSize: !Ref RootVolumeSize
+            VolumeType: "gp2"
+            Encrypted: "true"
+            DeleteOnTermination: "true"
+            #KmsKeyId: !Ref EC2KmsKeyId
+      # User Data commands to be run during Initialization of Server
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash -xe
+            yum update -y aws-cfn-bootstrap
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource launchconfig --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource asgroup --region ${AWS::Region}
+
+  # ASG Resource definition for all services except xce-web
+  asgroup:
+    Type: 'AWS::AutoScaling::AutoScalingGroup'
+    Properties:
+      Cooldown: '300'
+      DesiredCapacity: !Ref DesiredCapacity
+      HealthCheckGracePeriod: '300'
+      HealthCheckType: ELB
+      MaxSize: '10'
+      MinSize: '1'
+      VPCZoneIdentifier:
+      # Fetch EC2Subnet1 and EC2Subnet2 values
+      # Based on the condition defined as per Environment selected
+        - !If [GetValNetworkValues, !ImportValue subnet33b0A, !If [GetProdNetworkValues, !ImportValue subnet34b0A, !If [GetDevNetworkValues, !ImportValue subnet33b1A, !If [GetMLNetworkValues, !ImportValue subnet34b1A, !If [GetPTNetworkValues, !ImportValue subnet33b4A, !If [GetUTNetworkValues, !ImportValue subnet33b3A, !If [GetSITNetworkValues, !ImportValue subnet33b2A, !If [GetSIT2NetworkValues, !ImportValue subnet33b2A, !If [GetProdNetworkValuesIreland,!ImportValue subnet34b0B, !If [GetValNetworkValuesIreland, !ImportValue subnet33b0B, ""]]]]]]]]]]
+        - !If [GetValNetworkValues, !ImportValue subnet37b0A, !If [GetProdNetworkValues, !ImportValue subnet38b0A, !If [GetDevNetworkValues, !ImportValue subnet37b1A, !If [GetMLNetworkValues, !ImportValue subnet38b1A, !If [GetPTNetworkValues, !ImportValue subnet35b4A, !If [GetUTNetworkValues, !ImportValue subnet35b3A, !If [GetSITNetworkValues, !ImportValue subnet35b2A, !If [GetSIT2NetworkValues, !ImportValue subnet35b2A, !If [GetProdNetworkValuesIreland,!ImportValue subnet38b0B, !If [GetValNetworkValuesIreland, !ImportValue subnet37b0B, ""]]]]]]]]]]
+      LaunchConfigurationName: !Ref launchconfig
+      TargetGroupARNs:
+        - !Ref TargetGroup
+      # Adding tags to identify the ASG resource
+      # Same tags will be applicable to the instance launched
+      Tags:
+        - Key: Name
+          Value: !Sub ${Prefix}-${EnvName}-${Service}
+          PropagateAtLaunch: true
+        - Key: Project
+          Value: xce
+          PropagateAtLaunch: true
+        - Key: Environment
+          Value: !Ref EnvName
+          PropagateAtLaunch: true
+      TerminationPolicies:
+        - Default
+    DependsOn:
+        - NetworkLoadBalancer
+        - TargetGroup
+        - Listener        
+    #Creation policy for resource creation and deployment
+    CreationPolicy:
+      AutoScalingCreationPolicy:
+        MinSuccessfulInstancesPercent: 100
+      ResourceSignal:
+        Count: '1'
+        Timeout: PT10M
+    #Update policy for deploying new version
+    UpdatePolicy:
+      AutoScalingScheduledAction:
+        IgnoreUnmodifiedGroupSizeProperties: 'true'
+      AutoScalingRollingUpdate:
+        MinInstancesInService: '1'
+        MaxBatchSize: '2'
+        PauseTime: PT3M
+        WaitOnResourceSignals: 'true'
+
+  NetworkLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${Prefix}-${EnvName}-${Service}-nlb
+      Scheme: internal
+      # fetch NLB Subnet1 and NLB Subnet2 values
+      # same subnet as for ec2 instance
+      Subnets:
+        - !If [GetValNetworkValues, !ImportValue subnet33b0A, !If [GetProdNetworkValues, !ImportValue subnet34b0A, !If [GetDevNetworkValues, !ImportValue subnet33b1A, !If [GetMLNetworkValues, !ImportValue subnet34b1A, !If [GetPTNetworkValues, !ImportValue subnet33b4A, !If [GetUTNetworkValues, !ImportValue subnet33b3A, !If [GetSITNetworkValues, !ImportValue subnet33b2A, !If [GetSIT2NetworkValues, !ImportValue subnet33b2A, !If [GetProdNetworkValuesIreland,!ImportValue subnet34b0B, !If [GetValNetworkValuesIreland, !ImportValue subnet33b0B, ""]]]]]]]]]]
+        - !If [GetValNetworkValues, !ImportValue subnet37b0A, !If [GetProdNetworkValues, !ImportValue subnet38b0A, !If [GetDevNetworkValues, !ImportValue subnet37b1A, !If [GetMLNetworkValues, !ImportValue subnet38b1A, !If [GetPTNetworkValues, !ImportValue subnet35b4A, !If [GetUTNetworkValues, !ImportValue subnet35b3A, !If [GetSITNetworkValues, !ImportValue subnet35b2A, !If [GetSIT2NetworkValues, !ImportValue subnet35b2A, !If [GetProdNetworkValuesIreland,!ImportValue subnet38b0B, !If [GetValNetworkValuesIreland, !ImportValue subnet37b0B, ""]]]]]]]]]]  
+      Tags:
+        - Key: Name
+          Value: !Sub ${Prefix}-${EnvName}-${Service}-nlb
+        - Key: Project
+          Value: xce
+        - Key: Environment
+          Value: !Ref EnvName
+      Type: network
+      IpAddressType: ipv4
+  # define Target Group associated with the Service and NetworkLoadBalancer
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 10
+      HealthCheckProtocol: TCP
+      HealthyThresholdCount: 3
+      UnhealthyThresholdCount: 3
+      Name: !Sub ${Prefix}-${EnvName}-${Service}-tg
+      Port: !Ref ServicePort
+      Protocol: TCP
+      # Adding tags to identify and categorize the resources
+      Tags:
+        - Key: Name
+          Value: !Sub ${Prefix}-${EnvName}-${Service}
+        - Key: Project
+          Value: xce
+        - Key: Environment
+          Value: !Ref EnvName
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: !Ref LoadBalancerDeregistrationDelay
+      VpcId: !If [GetValNetworkValues, !ImportValue vpc30A, !If [GetProdNetworkValues, !ImportValue vpc30A, !If [GetDevNetworkValues, !ImportValue vpc31A, !If [GetMLNetworkValues, !ImportValue vpc31A, !If [GetPTNetworkValues, !ImportValue vpc34A, !If [GetUTNetworkValues, !ImportValue vpc33A, !If [GetSITNetworkValues, !ImportValue vpc32A, !If [GetSIT2NetworkValues, !ImportValue vpc32A, !If [GetProdNetworkValuesIreland,!ImportValue vpc30B, !If [GetValNetworkValuesIreland, !ImportValue vpc30B, ""]]]]]]]]]]
+  # Create Listener for Network LoadBalancer
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref 'TargetGroup'
+      LoadBalancerArn: !Ref 'NetworkLoadBalancer'
+      Port: !Ref ServicePort
+      Protocol: TCP
+
+  # Creating alarm to identify any unhealthy host under the TargetGroup for NLB
+  # Except Web Service
+  UnhealthyHostAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+         AlarmName: !Sub ${Prefix}-${EnvName}-${Service}-alarm
+         AlarmDescription: Unhealthy host under XCE Service TargetGroup
+         Namespace: AWS/NetworkELB
+         Dimensions:
+          - Name: LoadBalancer
+            Value: !Sub ${Prefix}-${EnvName}-${Service}-nlb
+          - Name: TargetGroup
+            Value: !Sub ${Prefix}-${EnvName}-${Service}-tg
+         MetricName: UnHealthyHostCount
+         ComparisonOperator: GreaterThanThreshold
+         Statistic: Minimum
+         Period: 60
+         EvaluationPeriods: 1
+         Threshold: 0
+
+  # Creating DNS record for the NLB for specific service
+  DNSRecord:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName: !Ref HostedZoneResource
+      Comment: Zone apex alias targeted to Elastic LoadBalancer.
+      RecordSets:
+      - Name: !Sub "${Prefix}-${EnvName}-${Service}-nlb.${HostedZoneResource}" 
+        Type: A
+        AliasTarget:
+          HostedZoneId: !GetAtt NetworkLoadBalancer.CanonicalHostedZoneID
+          DNSName: !GetAtt NetworkLoadBalancer.DNSName

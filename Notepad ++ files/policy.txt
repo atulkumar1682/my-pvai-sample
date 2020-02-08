@@ -1,0 +1,97 @@
+{
+    "Version": "2012-10-17",
+    "Id": "key-consolepolicy-3",
+    "Statement": [
+        {
+            "Sid": "Enable IAM User Permissions",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::681591231871:root"
+            },
+            "Action": "kms:*",
+            "Resource": "*"
+        },
+        {
+            "Sid": "Allow access for Key Administrators",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "arn:aws:iam::681591231871:user/850030935",
+                    "arn:aws:iam::681591231871:role/pfizer-fulltext-search-role",
+                    "AIDAIY2CQHUMFQU7JJK52",
+					"AIDAZ5MQA2V7TTGNPQEJZ",
+					"AIDAILPL34CALJSD7DGLU"
+                ]
+            },
+            "Action": [
+                "kms:Create*",
+                "kms:Describe*",
+                "kms:Enable*",
+                "kms:List*",
+                "kms:Put*",
+                "kms:Update*",
+                "kms:Revoke*",
+                "kms:Disable*",
+                "kms:Get*",
+                "kms:Delete*",
+                "kms:TagResource",
+                "kms:UntagResource",
+                "kms:ScheduleKeyDeletion",
+                "kms:CancelKeyDeletion"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "Allow use of the key",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "arn:aws:iam::681591231871:role/hyperglance",
+                    "arn:aws:iam::681591231871:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling",
+                    "arn:aws:iam::681591231871:user/S3USER-DEV",
+                    "arn:aws:iam::681591231871:role/pfizer-fulltext-search-role",
+                    "arn:aws:iam::681591231871:role/EC2-S3-AccessRole",
+                    "arn:aws:iam::681591231871:role/ec2-xce-docker-service",
+                    "arn:aws:iam::681591231871:role/lambda-auto-start-stop",
+					"arn:aws:iam::681591231871:user/850036089",
+					"arn:aws:iam::681591231871:user/devops"
+					
+                ]
+            },
+            "Action": [
+                "kms:Encrypt",
+                "kms:Decrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*",
+                "kms:DescribeKey"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "Allow attachment of persistent resources",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "arn:aws:iam::681591231871:role/hyperglance",
+                    "arn:aws:iam::681591231871:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling",
+                    "arn:aws:iam::681591231871:user/S3USER-DEV",
+                    "arn:aws:iam::681591231871:role/pfizer-fulltext-search-role",
+                    "arn:aws:iam::681591231871:role/EC2-S3-AccessRole",
+                    "arn:aws:iam::681591231871:role/ec2-xce-docker-service",
+                    "arn:aws:iam::681591231871:role/lambda-auto-start-stop"
+                ]
+            },
+            "Action": [
+                "kms:CreateGrant",
+                "kms:ListGrants",
+                "kms:RevokeGrant"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "Bool": {
+                    "kms:GrantIsForAWSResource": "true"
+                }
+            }
+        }
+    ]
+}

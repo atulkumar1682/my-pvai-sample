@@ -1,0 +1,555 @@
+#------------------------------------------------------------------------------------#
+## Copyright © Genpact 2018. All Rights Reserved.                                   ##
+## Ltd trading as G in NYSE - Registered in US.                                     ##
+## Registered Office - Canon's Court, 22 Victoria Street HAMILTON, HM 12, Bermuda.  ##
+#------------------------------------------------------------------------------------#
+## Author = 'Vivek Trivedi (Genpact Limited)'                                       ##
+## Version = '1.0.0'                                                                ##
+## Date = 6-Apr-2018                                                                ##
+#------------------------------------------------------------------------------------#
+AWSTemplateFormatVersion: 2010-09-09
+Description: Operations & Core Routes for VPC Peers across All Regions.
+Parameters:
+    Region: 
+        Description: AWS Region
+        Default: N-Virginia(us-east-1)
+        Type: String
+        AllowedValues: 
+           - N-Virginia(us-east-1)
+           - Ireland(eu-west-1)
+        ConstraintDescription: Select the Region for creation.
+    EnvType: 
+        Description: Environment Type
+        Default: DEV/ML
+        Type: String
+        AllowedValues: 
+           - DEV/ML
+           - SIT
+           - VAL/PROD
+           - UserTraining
+           - PerformanceTesting
+        ConstraintDescription: Select the Environment for Creation.
+Conditions: 
+  CreateCondition1A: !And
+        - !Equals [ !Ref EnvType, DEV/ML ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition2A: !And
+        - !Equals [ !Ref EnvType, SIT ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition0A: !And
+        - !Equals [ !Ref EnvType, VAL/PROD ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition0B: !And
+        - !Equals [ !Ref Region, Ireland(eu-west-1) ]
+        - !Equals [ !Ref EnvType, VAL/PROD ]
+  CreateCondition3A: !And
+        - !Equals [ !Ref EnvType, UserTraining ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition4A: !And
+        - !Equals [ !Ref EnvType, PerformanceTesting ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+Resources:
+  routea1Ato21A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition1A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato21A
+      DestinationCidrBlock: 10.10.0.0/16
+      RouteTableId: !ImportValue vpc1rt1aA
+  routeb1Ato21A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition1A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato21A
+      DestinationCidrBlock: 10.10.0.0/16
+      RouteTableId: !ImportValue vpc1rt2bA
+  routea1Ato22A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition2A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato22A
+      DestinationCidrBlock: 10.50.0.0/16
+      RouteTableId: !ImportValue vpc1rt1aA
+  routeb1Ato22A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition2A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato22A
+      DestinationCidrBlock: 10.50.0.0/16
+      RouteTableId: !ImportValue vpc1rt2bA    
+  routea1Ato20A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato20A
+      DestinationCidrBlock: 10.20.0.0/16
+      RouteTableId: !ImportValue vpc1rt1aA
+  routeb1Ato20A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato20A
+      DestinationCidrBlock: 10.20.0.0/16
+      RouteTableId: !ImportValue vpc1rt2bA    
+  routea1Ato23A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition3A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato23A
+      DestinationCidrBlock: 10.30.0.0/16
+      RouteTableId: !ImportValue vpc1rt1aA
+  routeb1Ato23A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition3A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato23A
+      DestinationCidrBlock: 10.30.0.0/16
+      RouteTableId: !ImportValue vpc1rt2bA    
+  routea1Ato24A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition4A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato24A
+      DestinationCidrBlock: 10.60.0.0/16
+      RouteTableId: !ImportValue vpc1rt1aA
+  routeb1Ato24A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition4A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato24A
+      DestinationCidrBlock: 10.60.0.0/16
+      RouteTableId: !ImportValue vpc1rt2bA
+  routea1Ato31A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition1A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato31A
+      DestinationCidrBlock: 10.12.0.0/16
+      RouteTableId: !ImportValue vpc1rt1aA
+  routeb1Ato31A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition1A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato31A
+      DestinationCidrBlock: 10.12.0.0/16
+      RouteTableId: !ImportValue vpc1rt2bA
+  routea1Ato32A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition2A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato32A
+      DestinationCidrBlock: 10.52.0.0/16
+      RouteTableId: !ImportValue vpc1rt1aA
+  routeb1Ato32A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition2A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato32A
+      DestinationCidrBlock: 10.52.0.0/16
+      RouteTableId: !ImportValue vpc1rt2bA    
+  routea1Ato30A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato30A
+      DestinationCidrBlock: 10.22.0.0/16
+      RouteTableId: !ImportValue vpc1rt1aA
+  routeb1Ato30A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato30A
+      DestinationCidrBlock: 10.22.0.0/16
+      RouteTableId: !ImportValue vpc1rt2bA    
+  routea1Ato33A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition3A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato33A
+      DestinationCidrBlock: 10.32.0.0/16
+      RouteTableId: !ImportValue vpc1rt1aA
+  routeb1Ato33A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition3A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato33A
+      DestinationCidrBlock: 10.32.0.0/16
+      RouteTableId: !ImportValue vpc1rt2bA    
+  routea1Ato34A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition4A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato34A
+      DestinationCidrBlock: 10.62.0.0/16
+      RouteTableId: !ImportValue vpc1rt1aA
+  routeb1Ato34A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition4A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato34A
+      DestinationCidrBlock: 10.62.0.0/16
+      RouteTableId: !ImportValue vpc1rt2bA
+  route21a1Ato21A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition1A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato21A
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId: !ImportValue vpc2rt1a1A
+  route22a21Ato31A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition1A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc21Ato31A
+      DestinationCidrBlock: 10.12.0.0/16
+      RouteTableId: !ImportValue vpc2rt1a1A
+  route23b1Ato21A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition1A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato21A
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId: !ImportValue vpc2rt2b1A
+  route24b21Ato31A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition1A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc21Ato31A
+      DestinationCidrBlock: 10.12.0.0/16
+      RouteTableId: !ImportValue vpc2rt2b1A
+  route21a1Ato22A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition2A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato22A
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId: !ImportValue vpc2rt1a2A
+  route22a22Ato32A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition2A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc22Ato32A
+      DestinationCidrBlock: 10.52.0.0/16
+      RouteTableId: !ImportValue vpc2rt1a2A
+  route23b1Ato22A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition2A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato22A
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId: !ImportValue vpc2rt2b2A
+  route24b22Ato32A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition2A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc22Ato32A
+      DestinationCidrBlock: 10.52.0.0/16
+      RouteTableId: !ImportValue vpc2rt2b2A
+  route21a1Ato20A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato20A
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId: !ImportValue vpc2rt1a0A
+  route22a20Ato30A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc20Ato30A
+      DestinationCidrBlock: 10.22.0.0/16
+      RouteTableId: !ImportValue vpc2rt1a0A
+  route23b1Ato20A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato20A
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId: !ImportValue vpc2rt2b0A
+  route24b20Ato30A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc20Ato30A
+      DestinationCidrBlock: 10.22.0.0/16
+      RouteTableId: !ImportValue vpc2rt2b0A
+  route21a1Ato23A:  
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition3A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato23A
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId: !ImportValue vpc2rt1a3A
+  route22a23Ato33A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition3A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc23Ato33A
+      DestinationCidrBlock: 10.32.0.0/16
+      RouteTableId: !ImportValue vpc2rt1a3A
+  route23b1Ato23A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition3A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato23A
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId: !ImportValue vpc2rt2b3A
+  route24b23Ato33A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition3A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc23Ato33A
+      DestinationCidrBlock: 10.32.0.0/16
+      RouteTableId: !ImportValue vpc2rt2b3A
+  route21a1Ato24A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition4A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato24A
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId: !ImportValue vpc2rt1a4A
+  route22a24Ato34A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition4A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc24Ato34A
+      DestinationCidrBlock: 10.62.0.0/16
+      RouteTableId: !ImportValue vpc2rt1a4A
+  route23b1Ato24A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition4A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato24A
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId: !ImportValue vpc2rt2b4A
+  route24b24Ato34A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition4A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc24Ato34A
+      DestinationCidrBlock: 10.62.0.0/16
+      RouteTableId: !ImportValue vpc2rt2b4A      
+  route31a1Ato31A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition1A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato31A
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId: !ImportValue vpc3rt1a1A
+  route32a21Ato31A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition1A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc21Ato31A
+      DestinationCidrBlock: 10.10.0.0/16
+      RouteTableId: !ImportValue vpc3rt1a1A
+  route33b1Ato31A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition1A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato31A
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId: !ImportValue vpc3rt2b1A
+  route34b21Ato31A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition1A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc21Ato31A
+      DestinationCidrBlock: 10.10.0.0/16
+      RouteTableId: !ImportValue vpc3rt2b1A
+  route31a1Ato32A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition2A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato32A
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId: !ImportValue vpc3rt1a2A
+  route32a22Ato32A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition2A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc22Ato32A
+      DestinationCidrBlock: 10.50.0.0/16
+      RouteTableId: !ImportValue vpc3rt1a2A
+  route33b1Ato32A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition2A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato32A
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId: !ImportValue vpc3rt2b2A
+  route34b22Ato32A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition2A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc22Ato32A
+      DestinationCidrBlock: 10.50.0.0/16
+      RouteTableId: !ImportValue vpc3rt2b2A
+  route31a1Ato32A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato30A
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId: !ImportValue vpc3rt1a0A
+  route32a22Ato32A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc20Ato30A
+      DestinationCidrBlock: 10.20.0.0/16
+      RouteTableId: !ImportValue vpc3rt1a0A
+  route33b1Ato32A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato30A
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId: !ImportValue vpc3rt2b0A
+  route34b22Ato32A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc20Ato30A
+      DestinationCidrBlock: 10.20.0.0/16
+      RouteTableId: !ImportValue vpc3rt2b0A
+  route31a1Ato33A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition3A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato33A
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId: !ImportValue vpc3rt1a3A
+  route32a23Ato33A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition3A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc23Ato33A
+      DestinationCidrBlock: 10.30.0.0/16
+      RouteTableId: !ImportValue vpc3rt1a3A
+  route33b1Ato33A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition3A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato33A
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId: !ImportValue vpc3rt2b3A
+  route34b23Ato33A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition3A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc23Ato33A
+      DestinationCidrBlock: 10.30.0.0/16
+      RouteTableId: !ImportValue vpc3rt2b3A
+  route31a1Ato34A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition4A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato34A
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId: !ImportValue vpc3rt1a4A
+  route32a24Ato34A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition4A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc24Ato34A
+      DestinationCidrBlock: 10.60.0.0/16
+      RouteTableId: !ImportValue vpc3rt1a4A
+  route33b1Ato34A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition4A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Ato34A
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId: !ImportValue vpc3rt2b4A
+  route34b24Ato34A:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition4A
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc24Ato34A
+      DestinationCidrBlock: 10.60.0.0/16
+      RouteTableId: !ImportValue vpc3rt2b4A
+  routea1Bto20B:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0B
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Bto20B
+      DestinationCidrBlock: 10.21.0.0/16
+      RouteTableId: !ImportValue vpc1rt1aB
+  routea1Bto30B:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0B
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Bto30B
+      DestinationCidrBlock: 10.23.0.0/16
+      RouteTableId: !ImportValue vpc1rt1aB
+  routeb1Bto20B:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0B
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Bto20B
+      DestinationCidrBlock: 10.21.0.0/16
+      RouteTableId: !ImportValue vpc1rt2bB
+  routeb1Bto30B:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0B
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Bto30B
+      DestinationCidrBlock: 10.23.0.0/16
+      RouteTableId: !ImportValue vpc1rt2bB    
+  route21a1Bto20B:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0B
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Bto20B
+      DestinationCidrBlock: 10.1.0.0/16
+      RouteTableId: !ImportValue vpc2rt1a0B
+  route22a20Bto30B:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0B
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc20Bto30B
+      DestinationCidrBlock: 10.23.0.0/16
+      RouteTableId: !ImportValue vpc2rt1a0B
+  route23b1Bto20B:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0B
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Bto20B
+      DestinationCidrBlock: 10.1.0.0/16
+      RouteTableId: !ImportValue vpc2rt2b0B
+  route24b20Bto30B:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0B
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc20Bto30B
+      DestinationCidrBlock: 10.23.0.0/16
+      RouteTableId: !ImportValue vpc2rt2b0B
+  route31a1Bto30B:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0B
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Bto30B
+      DestinationCidrBlock: 10.1.0.0/16
+      RouteTableId: !ImportValue vpc3rt1a0B
+  route32a20Bto30B:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0B
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc20Bto30B
+      DestinationCidrBlock: 10.21.0.0/16
+      RouteTableId: !ImportValue vpc3rt1a0B
+  route33b1Bto30B:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0B
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc1Bto30B
+      DestinationCidrBlock: 10.1.0.0/16
+      RouteTableId: !ImportValue vpc3rt2b0B
+  route34b20Bto30B:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition0B
+    Properties:
+      VpcPeeringConnectionId: !ImportValue peervpc20Bto30B
+      DestinationCidrBlock: 10.21.0.0/16
+      RouteTableId: !ImportValue vpc3rt2b0B

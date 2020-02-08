@@ -1,0 +1,39 @@
+1. Extending VPC's, NAT Gateways & Elastic IP's to 15 in each region N-Primary and Secondary
+2. Export all the AMI's from the PVAI-DEVOPS to the new account before you run the scripts.
+3. Create a KeyPair for the new Environment and change it in the CFN's in the Key Pair section in the specified scripts.
+
+Naming convention:
+
+CloudTrailAPIEvents scripts are common for all environments and regions. So don't append any environment name at end eg. DEV, ML
+
+1.Ops-Vpc
+2.Ops-PublicSubnet
+3.Ops-PrivateSubnet
+4.Ops-RouteTable
+5.Ops-SubnetRoutetableAssociation
+6.Ops-InternetGateways
+7.Ops-ElasticIpNatGateway
+8.Ops-Ig-Nat-Routes
+9.Ops-CloudTrailS3
+10.Ops-CloudTrail
+11.Ops-CloudWatchLogsGroup
+12.Ops-CloudTrailAPIEvents
+13.Ops-ESandKibana
+14.Core-Vpc
+15.Core-PublicSubnet
+16.Core-PrivateSubnet
+17.Core-ReportingSubnet
+18.Core-RouteTables
+19.Core-SubnetRoutetableAssociation
+20.Core-InternetGateway
+21.Core-ElasticIP-NatGateway
+22.Core-VpcPeers
+23.Core-Ig-Nat-Routes
+24.Core-Peer-Routes
+25.Core-VpcEndpoints
+26.Core-RDS
+27.Core-S3
+28.Core-ElasticSearchKibana
+29.Core-RedisCluster
+30.Ops-NaclSubnetAssociation
+31.Core-NaclSubnetAssociation

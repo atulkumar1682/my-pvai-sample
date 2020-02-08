@@ -1,0 +1,30 @@
+{
+   "Version": "2012-10-17",
+   "Id": "Policy1415115909152",
+   "Statement": [
+{
+           "Sid": "Access-to-specific-VPCE-only",
+           "Effect": "Deny",
+           "Principal": "*",
+           "Action": "s3:*",
+           "Resource": [
+               "arn:aws:s3:::pvai-devops-tools",
+			   "arn:aws:s3:::pvai-devops-tools/*"
+           ],
+           "Condition": {
+               "StringNotLike": {
+                   "aws:userId": [
+                       "AIDAJKCZNEYGQFGGJ4VGE",
+                   ]
+               },
+               "StringNotEquals": {
+                   "aws:sourceVpce": [
+                       "vpce-055b861a5d8abd209",
+                       "vpce-b344d5da"
+                   ]
+               }
+            }
+        }
+		]
+	}
+		

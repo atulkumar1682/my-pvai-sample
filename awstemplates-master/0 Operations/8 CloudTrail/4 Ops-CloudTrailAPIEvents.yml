@@ -1,0 +1,333 @@
+#------------------------------------------------------------------------------------#
+## Copyright © Genpact 2018. All Rights Reserved.                                   ##
+## Ltd trading as G in NYSE - Registered in US.                                     ##
+## Registered Office - Canon's Court, 22 Victoria Street HAMILTON, HM 12, Bermuda.  ##
+#------------------------------------------------------------------------------------#
+## Author = 'Pankaj Motwani  (Genpact Limited)'                                     ##
+## Version = '1.0.0'                                                                ##
+## Date = 6-Apr-2018                                                                ##
+#------------------------------------------------------------------------------------#
+#------------------------------------------------------------------------------------#
+## modified_by = 'Sandeep Kumar  (Genpact Limited)'                                 ##
+## ver = '1.0.1'                                                                    ##
+## changes = "Environment specific dependencies removed and all resources           ##
+##           created at account level only"                                         ##
+## date = '1-Oct-2018'                                                              ##
+#------------------------------------------------------------------------------------#
+AWSTemplateFormatVersion: '2010-09-09' 
+Description: AWS CloudTrail API Activity Alarm Template for CloudWatch Logs
+# Parameters for the Stack Creation
+Parameters:
+   # AWS Account Name to be entered
+    AWSAccount: 
+        Description: AWS Account for CloudTrail logs
+        Default: product
+        Type: String
+Resources:
+# Create SecurityGroup related changes MetricFilter
+  SecurityGroupChangesMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName:
+      - Fn::ImportValue:
+          !Sub "cloudtrail_${AWSAccount}"
+      FilterPattern: "{ ($.eventName = AuthorizeSecurityGroupIngress) || ($.eventName
+        = AuthorizeSecurityGroupEgress) || ($.eventName = RevokeSecurityGroupIngress)
+        || ($.eventName = RevokeSecurityGroupEgress) || ($.eventName = CreateSecurityGroup)
+        || ($.eventName = DeleteSecurityGroup) }"
+      MetricTransformations:
+      - MetricNamespace: CloudTrailMetrics
+        MetricName: SecurityGroupEventCount
+        MetricValue: '1'
+# Create SecurityGroup related changes Alarm
+  SecurityGroupChangesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub CloudTrailSecurityGroupChanges-${AWSAccount}
+      AlarmDescription: Alarms when an API call is made to create, update or delete
+        a Security Group.
+      AlarmActions: 
+      - Fn::ImportValue:
+          !Sub "PVAITracking${AWSAccount}"
+      MetricName: SecurityGroupEventCount
+      Namespace: CloudTrailMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '300'
+      Statistic: Sum
+      Threshold: '1'
+# Create NetworkAcl related changes MetricFilter
+  NetworkAclChangesMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName:
+      - Fn::ImportValue:
+          !Sub "cloudtrail_${AWSAccount}"
+      FilterPattern: "{ ($.eventName = CreateNetworkAcl) || ($.eventName = CreateNetworkAclEntry)
+        || ($.eventName = DeleteNetworkAcl) || ($.eventName = DeleteNetworkAclEntry)
+        || ($.eventName = ReplaceNetworkAclEntry) || ($.eventName = ReplaceNetworkAclAssociation)
+        }"
+      MetricTransformations:
+      - MetricNamespace: CloudTrailMetrics
+        MetricName: NetworkAclEventCount
+        MetricValue: '1'
+ # Create NetworkAcl related changes Alarm
+  NetworkAclChangesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub CloudTrailNetworkAclChanges-${AWSAccount}
+      AlarmDescription: Alarms when an API call is made to create, update or delete
+        a Network ACL.
+      AlarmActions: 
+      - Fn::ImportValue:
+          !Sub "PVAITracking${AWSAccount}"
+      MetricName: NetworkAclEventCount
+      Namespace: CloudTrailMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '300'
+      Statistic: Sum
+      Threshold: '1'
+ # Create Gateway related changes MetricFilter
+  GatewayChangesMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName:
+      - Fn::ImportValue:
+          !Sub "cloudtrail_${AWSAccount}"
+      FilterPattern: "{ ($.eventName = CreateCustomerGateway) || ($.eventName = DeleteCustomerGateway)
+        || ($.eventName = AttachInternetGateway) || ($.eventName = CreateInternetGateway)
+        || ($.eventName = DeleteInternetGateway) || ($.eventName = DetachInternetGateway)
+        }"
+      MetricTransformations:
+      - MetricNamespace: CloudTrailMetrics
+        MetricName: GatewayEventCount
+        MetricValue: '1'
+ # Create Gateway related changes Alarm
+  GatewayChangesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub CloudTrailGatewayChanges-${AWSAccount}
+      AlarmDescription: Alarms when an API call is made to create, update or delete
+        a Customer or Internet Gateway.
+      AlarmActions: 
+      - Fn::ImportValue:
+          !Sub "PVAITracking${AWSAccount}"
+      MetricName: GatewayEventCount
+      Namespace: CloudTrailMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '300'
+      Statistic: Sum
+      Threshold: '1'
+ # Create VPC related changes MetricFilter
+  VpcChangesMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName:
+      - Fn::ImportValue:
+          !Sub "cloudtrail_${AWSAccount}"
+      FilterPattern: "{ ($.eventName = CreateVpc) || ($.eventName = DeleteVpc) ||
+        ($.eventName = ModifyVpcAttribute) || ($.eventName = AcceptVpcPeeringConnection)
+        || ($.eventName = CreateVpcPeeringConnection) || ($.eventName = DeleteVpcPeeringConnection)
+        || ($.eventName = RejectVpcPeeringConnection) || ($.eventName = AttachClassicLinkVpc)
+        || ($.eventName = DetachClassicLinkVpc) || ($.eventName = DisableVpcClassicLink)
+        || ($.eventName = EnableVpcClassicLink) }"
+      MetricTransformations:
+      - MetricNamespace: CloudTrailMetrics
+        MetricName: VpcEventCount
+        MetricValue: '1'
+ # Create VPC related changes Alarm
+  VpcChangesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub CloudTrailVpcChanges-${AWSAccount}
+      AlarmDescription: Alarms when an API call is made to create, update or delete
+        a VPC, VPC peering connection or VPC connection to classic.
+      AlarmActions: 
+      - Fn::ImportValue:
+          !Sub "PVAITracking${AWSAccount}"
+      MetricName: VpcEventCount
+      Namespace: CloudTrailMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '300'
+      Statistic: Sum
+      Threshold: '1'
+  # Create EC2 Instances related even changes MetricFilter
+  # When EC2 Instances changes state i.e. from running to stop/reboot
+  EC2InstanceChangesMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName:
+      - Fn::ImportValue:
+          !Sub "cloudtrail_${AWSAccount}"
+      FilterPattern: "{ ($.eventName = RunInstances) || ($.eventName = RebootInstances)
+        || ($.eventName = StartInstances) || ($.eventName = StopInstances) || ($.eventName
+        = TerminateInstances) }"
+      MetricTransformations:
+      - MetricNamespace: CloudTrailMetrics
+        MetricName: EC2InstanceEventCount
+        MetricValue: '1'
+  # Create EC2 Instances related even changes Alarm
+  # When EC2 Instances changes state i.e. from running to stop/reboot
+  EC2InstanceChangesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub CloudTrailEC2InstanceChanges-${AWSAccount}
+      AlarmDescription: Alarms when an API call is made to create, terminate, start,
+        stop or reboot an EC2 instance.
+      AlarmActions: 
+      - Fn::ImportValue:
+          !Sub "PVAITracking${AWSAccount}"
+      MetricName: EC2InstanceEventCount
+      Namespace: CloudTrailMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '300'
+      Statistic: Sum
+      Threshold: '1'
+  EC2LargeInstanceChangesMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName:
+      - Fn::ImportValue:
+          !Sub "cloudtrail_${AWSAccount}"
+      FilterPattern: "{ ($.eventName = RunInstances) && (($.requestParameters.instanceType
+        = *.8xlarge) || ($.requestParameters.instanceType = *.4xlarge)) }"
+      MetricTransformations:
+      - MetricNamespace: CloudTrailMetrics
+        MetricName: EC2LargeInstanceEventCount
+        MetricValue: '1'
+  EC2LargeInstanceChangesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub CloudTrailEC2LargeInstanceChanges-${AWSAccount}
+      AlarmDescription: Alarms when an API call is made to create, terminate, start,
+        stop or reboot a 4x or 8x-large EC2 instance.
+      AlarmActions: 
+      - Fn::ImportValue:
+          !Sub "PVAITracking${AWSAccount}"
+      MetricName: EC2LargeInstanceEventCount
+      Namespace: CloudTrailMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '300'
+      Statistic: Sum
+      Threshold: '1'
+  # Create CloudTrail related event changes MetricFilter
+  CloudTrailChangesMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName:
+      - Fn::ImportValue:
+          !Sub "cloudtrail_${AWSAccount}"
+      FilterPattern: "{ ($.eventName = CreateTrail) || ($.eventName = UpdateTrail)
+        || ($.eventName = DeleteTrail) || ($.eventName = StartLogging) || ($.eventName
+        = StopLogging) }"
+      MetricTransformations:
+      - MetricNamespace: CloudTrailMetrics
+        MetricName: CloudTrailEventCount
+        MetricValue: '1'
+  # Create CloudTrail related event changes Alarm
+  CloudTrailChangesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub CloudTrailChanges-${AWSAccount}
+      AlarmDescription: Alarms when an API call is made to create, update or delete
+        a CloudTrail trail, or to start or stop logging to a trail.
+      AlarmActions: 
+      - Fn::ImportValue:
+          !Sub "PVAITracking${AWSAccount}"
+      MetricName: CloudTrailEventCount
+      Namespace: CloudTrailMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '300'
+      Statistic: Sum
+      Threshold: '1'
+   # Create ConsoleSignIn Failures MetricFilter
+  ConsoleSignInFailuresMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName:
+      - Fn::ImportValue:
+          !Sub "cloudtrail_${AWSAccount}"
+      FilterPattern: '{ ($.eventName = ConsoleLogin) && ($.errorMessage = "Failed
+        authentication") }'
+      MetricTransformations:
+      - MetricNamespace: CloudTrailMetrics
+        MetricName: ConsoleSignInFailureCount
+        MetricValue: '1'
+    # Create ConsoleSignIn Failures Alarm
+  ConsoleSignInFailuresAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub CloudTrailConsoleSignInFailures-${AWSAccount}
+      AlarmDescription: Alarms when an unauthenticated API call is made to sign into
+        the console.
+      AlarmActions: 
+      - Fn::ImportValue:
+          !Sub "PVAITracking${AWSAccount}"
+      MetricName: ConsoleSignInFailureCount
+      Namespace: CloudTrailMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '300'
+      Statistic: Sum
+      Threshold: '3'
+  AuthorizationFailuresMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName:
+      - Fn::ImportValue:
+          !Sub "cloudtrail_${AWSAccount}"
+      FilterPattern: '{ ($.errorCode = "*UnauthorizedOperation") || ($.errorCode =
+        "AccessDenied*") }'
+      MetricTransformations:
+      - MetricNamespace: CloudTrailMetrics
+        MetricName: AuthorizationFailureCount
+        MetricValue: '1'
+  AuthorizationFailuresAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub CloudTrailAuthorizationFailures-${AWSAccount}
+      AlarmDescription: Alarms when an unauthorized API call is made.
+      AlarmActions: 
+      - Fn::ImportValue:
+          !Sub "PVAITracking${AWSAccount}"
+      MetricName: AuthorizationFailureCount
+      Namespace: CloudTrailMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '300'
+      Statistic: Sum
+      Threshold: '1'
+# Create IAM Policy Changes MetricFilter
+  IAMPolicyChangesMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName:
+      - Fn::ImportValue:
+          !Sub "cloudtrail_${AWSAccount}"
+      FilterPattern: "{($.eventName=DeleteGroupPolicy)||($.eventName=DeleteRolePolicy)||($.eventName=DeleteUserPolicy)||($.eventName=PutGroupPolicy)||($.eventName=PutRolePolicy)||($.eventName=PutUserPolicy)||($.eventName=CreatePolicy)||($.eventName=DeletePolicy)||($.eventName=CreatePolicyVersion)||($.eventName=DeletePolicyVersion)||($.eventName=AttachRolePolicy)||($.eventName=DetachRolePolicy)||($.eventName=AttachUserPolicy)||($.eventName=DetachUserPolicy)||($.eventName=AttachGroupPolicy)||($.eventName=DetachGroupPolicy)}"
+      MetricTransformations:
+      - MetricNamespace: CloudTrailMetrics
+        MetricName: IAMPolicyEventCount
+        MetricValue: '1'
+    # Create IAM Policy Changes Alarm
+  IAMPolicyChangesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub CloudTrailIAMPolicyChanges-${AWSAccount}
+      AlarmDescription: Alarms when an API call is made to change an IAM policy.
+      AlarmActions: 
+      - Fn::ImportValue:
+          !Sub "PVAITracking${AWSAccount}"
+      MetricName: IAMPolicyEventCount
+      Namespace: CloudTrailMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '300'
+      Statistic: Sum
+      Threshold: '1'

@@ -1,0 +1,30 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "DenyPublicSettingChange",
+            "Effect": "Deny",
+            "Action": [
+                "s3:PutAccountPublicAccessBlock",
+                "s3:PutBucketPublicAccessBlock",
+                "s3:DeletePublicAccessBlock",
+                "s3:GetAccountPublicAccessBlock",
+                "s3:GetBucketPublicAccessBlock",
+                "s3:GetBucketPolicyStatus"
+            ],
+            "Resource": [
+                "*"
+            ]
+        },
+        {
+            "Sid": "AllowAdmin",
+            "Effect": "Allow",
+            "Action": [
+                "s3:*"
+            ],
+            "Resource": [
+                "*"
+            ]
+        }
+    ]
+}

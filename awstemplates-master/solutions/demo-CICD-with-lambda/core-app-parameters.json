@@ -1,0 +1,30 @@
+[
+  {
+    "ParameterKey": "EnvType",
+    "ParameterValue": "dev"
+  }, 
+  {
+    "ParameterKey": "AMI",
+    "ParameterValue": "ami-064b90caf28065652"
+  }, 
+  {
+    "ParameterKey": "CertID",
+    "ParameterValue": "1108d510-800f-4bd0-8409-0272a81d7f73"
+  }, 
+  {
+    "ParameterKey": "PackagePath",
+    "ParameterValue": "1.0/core-app"
+  },
+  {
+    "ParameterKey": "ConfigPath",
+    "ParameterValue": "dev"
+  },  
+  {
+    "ParameterKey": "KeyName",
+    "ParameterValue": "pvai-verification-dev"
+  },  
+  {
+    "ParameterKey": "S3Bucket",
+    "ParameterValue": "pvai-verification-deployment"
+  }  
+]

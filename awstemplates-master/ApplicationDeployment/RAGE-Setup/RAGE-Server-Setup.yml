@@ -1,0 +1,418 @@
+---
+# -------------------------------------------------------------------------------------------------
+#
+#     Copyright © Genpact 2018. All Rights Reserved.
+#     Ltd trading as G in NYSE - Registered in US.
+#     Registered Office - Canon's Court, 22 Victoria Street HAMILTON, HM 12, Bermuda.
+#
+# -------------------------------------------------------------------------------------------------
+## author = 'Sandeep Kumar (Genpact Limited)'
+## ver = '1.0.0'
+## date = 23-May-2018
+# -------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------
+## modified_by = 'Sandeep Kumar (Genpact Limited)'
+## ver = '1.0.1'
+## date = 28-May-2019
+# -------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------
+## modified_by = 'Sandeep Kumar (Genpact Limited)'
+## ver = '1.0.2'
+## changes = "Base AMI to be used instead of encrypted one and encryption on the fly for the volumes"
+##           "Addition of filebeat.yml"
+## date = 19-Jul-2019
+# -------------------------------------------------------------------------------------------------
+
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create RAGE Application resources ELB, ASG & LC etc
+
+Parameters:
+    Prefix:
+        Description: Prefix Value
+        Default: pvai
+        Type: String
+    Account:
+        Description: Account Name
+        Default: verification
+        Type: String
+    Region:
+        Description: AWS Region
+        Default: Primary
+        Type: String
+        AllowedValues:
+           - Primary
+           - Secondary
+        ConstraintDescription: Select the AWS Region.
+    EnvType:
+        Description: Environment Type
+        Default: prod
+        Type: String
+        AllowedValues: [ dev, ml, pt, ut, sit, val, prod ]
+        ConstraintDescription: Select the Environment for Creation.
+    AMI:
+        Description: AMI for EC2 Instance
+        Default: ami-060264b0de5c6694a
+        Type: String        
+    InstanceType:
+        Description: Instance Type
+        Default: c4.xlarge
+        Type: String
+        AllowedValues: [ c5.xlarge, c5.2xlarge, c5.4xlarge, c4.xlarge, c4.2xlarge, c4.4xlarge ]
+        ConstraintDescription: Select the Instance Type for EC2.
+    RootVolumeSize:
+        Description: Root volume size.
+        Type: String
+        Default: "50"
+    SecondaryVolumeSize:
+        Description: Secondary volume size.
+        Type: String
+        Default: "200"
+    KeyName:
+        Description: Name of an existing EC2 KeyPair to enable SSH access to the instance.
+        Type: 'AWS::EC2::KeyPair::KeyName'
+        Default: pvai-verification-prod
+    EC2KmsKeyId:
+        Description: KMS Key for EC2 Volume Encryption 
+        Default: "591fd75e-5b4f-4208-8b0d-199eadfa55f9"
+        Type: String
+    S3Bucket:
+        Description: S3 Bucket for Package / Config files location 
+        Default: "pvai-verification-deployment"
+        Type: String
+    InstanceProfile:
+        Description: Instance Role
+        Default: EC2-S3-AccessRole
+        Type: String
+    DesiredCapacity:
+       Description: EC2 Instance Desired for Application
+       Type: Number
+       Default: 1
+       ConstraintDescription: 'Must be in the range [1-10]'
+       MinValue: 1
+       MaxValue: 4
+    MountPoint:
+      Description: The Linux mount point for the secondary volume
+      Type: String
+      MinLength: '1'
+      Default: /opt/application
+    JBossHome:
+      Description: JBoss Home path
+      Type: String
+      Default: /opt/application/wildfly-10.1.0.Final
+# Major and Minor releases and Artifacts path
+    MajorRelease:
+      Description: Major version of the Product
+      Type: String
+      Default: "intake-1.0"
+    MinorRelease:
+      Description: Minor version of the application
+      Type: String
+      Default: "102C"
+    BuildNumber:
+      Description: BuildNumber of Core-App application
+      Type: String
+      Default: "285"
+    PackagesPath:
+      Description: Path for the Rage Processes tar file (after application folder)
+      Type: String
+      Default: "packages"
+    ConfigFilesPath:
+      Description: Path for the config files (after environment folder)
+      Type: String
+      Default: "config"
+# short name of application like rge for Rage Framework
+    App:
+       Description: Application Short Name
+       Type: String
+       Default: rge
+    AppPort:
+       Description: Port being used to hit the Application
+       Type: String
+       Default: 8080
+       AllowedPattern: ^[0-9/]*$
+    AppUser:
+       Description: Port being used to hit the Application
+       Type: String
+       Default: "rageadmin"    
+    CIDR:
+       Description: IP range for the security group
+       Type: String
+       MinLength: '9'
+       MaxLength: '18'
+       Default: 10.0.0.0/8
+       AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+       ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    HostedZoneResource:
+       Description: Private DNS
+       Type: String
+       Default: local.
+    # Application specific parameters; primarily being used 
+    # as Environment Variables
+    
+# Create condition based on the Application selected;
+# Condition will be used in 'AWS::CloudFormation::Init' for LaunchConfiguration
+Conditions:
+  # Create condition based on the Environment selected;
+  # To fetch the VPC and Subnet values based on the condition
+  GetDevNetworkValues: !And
+       - !Equals [ !Ref EnvType, "dev" ]
+       - !Equals [ !Ref Region, Primary ]
+  GetMLNetworkValues: !And
+       - !Equals [ !Ref EnvType, "ml"]
+       - !Equals [ !Ref Region, Primary ]
+  GetPTNetworkValues: !And
+       - !Equals [ !Ref EnvType, "pt"]
+       - !Equals [ !Ref Region, Primary ]
+  GetUTNetworkValues: !And
+       - !Equals [ !Ref EnvType, "ut"]
+       - !Equals [ !Ref Region, Primary ]
+  GetSITNetworkValues: !And
+       - !Equals [ !Ref EnvType, "sit"]
+       - !Equals [ !Ref Region, Primary ]
+  GetValNetworkValues: !And
+       - !Equals [ !Ref EnvType, "val"]
+       - !Equals [ !Ref Region, Primary ]
+  GetProdNetworkValues: !And
+       - !Equals [ !Ref EnvType, "prod"]
+       - !Equals [ !Ref Region, Primary ]
+  GetProdNetworkValuesSecondary: !And
+       - !Equals [ !Ref EnvType, "prod"]
+       - !Equals [ !Ref Region, Secondary ]
+  GetValNetworkValuesSecondary: !And
+       - !Equals [ !Ref EnvType, "val"]
+       - !Equals [ !Ref Region, Secondary ]
+
+Resources:
+  sg:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Security Group for Communication to EC2 Instance
+      GroupName: !Sub ${Prefix}-${EnvType}-${App}
+      # Fetch the VPC based on the condition as per Environment selected
+      VpcId: !If [GetValNetworkValues, !ImportValue vpc30A, !If [GetProdNetworkValues, !ImportValue vpc30A, !If [GetDevNetworkValues, !ImportValue vpc31A, !If [GetMLNetworkValues, !ImportValue vpc31A, !If [GetPTNetworkValues, !ImportValue vpc34A, !If [GetUTNetworkValues, !ImportValue vpc33A, !If [GetSITNetworkValues, !ImportValue vpc32A, !If [GetProdNetworkValuesSecondary,!ImportValue vpc30B, !If [GetValNetworkValuesSecondary, !ImportValue vpc30B, ""]]]]]]]]]
+      SecurityGroupIngress:
+      - IpProtocol: '-1'
+        CidrIp: !Ref CIDR
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp:
+          Ref: CIDR
+      - IpProtocol: tcp
+        FromPort: '8080'
+        ToPort: '8080'
+        CidrIp:
+          Ref: CIDR
+      Tags:
+        - Key: Name
+          Value: !Sub ${Prefix}-${EnvType}-${App}
+
+  launchconfig:
+    Type: 'AWS::AutoScaling::LaunchConfiguration'
+    Metadata:
+      'AWS::CloudFormation::Init':
+        configSets:
+          DownloadPackages:
+          - downloadandrun
+        downloadandrun:
+          # Just for testing purpose to debug if file is created or not
+          files:
+            /tmp/test.txt:
+              content: Hello Rage World!
+              mode: '000755'
+              owner: !Ref AppUser
+              group: !Ref AppUser
+          commands:
+            # To download the config file
+            01_download_app_packages:
+              command: !Sub "aws s3 cp s3://${S3Bucket}/${MajorRelease}/${MinorRelease}/${BuildNumber}/${App}/${PackagesPath}/Deploy.tar . --region ${AWS::Region} && sleep 30"
+              cwd: !Sub "${JBossHome}/modules/system/layers/base/rage/main/rage/Deploy"
+              ignoreErrors: "false" 
+            02_extract_files:
+              command: !Sub "tar -xvf Deploy.tar && sleep 5 && rm -f Deploy.tar && sleep 10 && chmod -R 0755 ${JBossHome}/modules/system/layers/base/rage/main/rage/Deploy"
+              cwd: !Sub "${JBossHome}/modules/system/layers/base/rage/main/rage/Deploy"
+              ignoreErrors: "false"
+            03_update_certificate:
+              command: !Sub "aws s3 cp s3://${S3Bucket}/${MajorRelease}/${MinorRelease}/${BuildNumber}/${App}/${EnvType}/certificate.tar . && tar -xvf certificate.tar && sleep 5 && rm -f certificate.tar && chmod -R 0755 ${JBossHome}/certificate/ && chown -R ${AppUser}:${AppUser} ${JBossHome}/certificate/"
+              cwd: !Sub "${JBossHome}/certificate"
+              ignoreErrors: "false"            
+            04_download_config_files:
+              command: !Sub "aws s3 cp s3://${S3Bucket}/${MajorRelease}/${MinorRelease}/${BuildNumber}/${App}/${EnvType}/semantic-extraction/config.properties ${JBossHome}/ci/SemanticExtraction/resource/ --region ${AWS::Region} && aws s3 sync s3://${S3Bucket}/${MajorRelease}/${MinorRelease}/${BuildNumber}/${App}/${EnvType}/${ConfigFilesPath}/ ${JBossHome}/modules/system/layers/base/rage/main/rage/config/ --region ${AWS::Region} && aws s3 cp s3://${S3Bucket}/${MajorRelease}/${MinorRelease}/${BuildNumber}/${App}/${EnvType}/standalone-full.xml ${JBossHome}/standalone/configuration/ --region ${AWS::Region}"
+              cwd: !Sub "${JBossHome}"
+              ignoreErrors: "false"
+            05_download_ear_files:
+              command: !Sub "aws s3 cp s3://${S3Bucket}/${MajorRelease}/${MinorRelease}/${BuildNumber}/${App}/ear-files/ ${JBossHome}/standalone/deployments/ --recursive --region ${AWS::Region} && sleep 10"
+              cwd: !Sub "${JBossHome}"
+            06_download_shell_scripts:
+              command: !Sub "aws s3 cp s3://${S3Bucket}/${MajorRelease}/${MinorRelease}/${BuildNumber}/${App}/${EnvType}/shell-scripts/test_converter.sh ${JBossHome}/ci/Extraction/Extractor/ --region ${AWS::Region} && aws s3 cp s3://${S3Bucket}/${MajorRelease}/${MinorRelease}/${BuildNumber}/${App}/${EnvType}/shell-scripts/Pdf2Text.sh ${JBossHome}/shell_script/ && aws s3 cp s3://${S3Bucket}/${MajorRelease}/${MinorRelease}/${BuildNumber}/${App}/${EnvType}/shell-scripts/rawTextUpdater2.sh ${JBossHome}/ci/SemanticExtraction/ && sleep 5"
+              cwd: !Sub "${JBossHome}"
+              ignoreErrors: "false"
+            07_download_other_files:
+              command: !Sub "aws s3 cp s3://${S3Bucket}/${MajorRelease}/${MinorRelease}/${BuildNumber}/${App}/script/ ${JBossHome}/modules/system/layers/base/rage/main/rage/script/ --recursive --region ${AWS::Region} && aws s3 cp s3://${S3Bucket}/${MajorRelease}/${MinorRelease}/${BuildNumber}/${App}/i18n/ ${JBossHome}/modules/system/layers/base/rage/main/rage/system/i18n/ --recursive --region ${AWS::Region} && aws s3 cp s3://${S3Bucket}/${MajorRelease}/${MinorRelease}/${BuildNumber}/${App}/Handler.jar ${JBossHome}/modules/system/layers/base/rage/main/ --region ${AWS::Region} && sleep 10"
+              cwd: !Sub "${JBossHome}"
+              ignoreErrors: "false"
+            08_download_filebeat_file:
+              command: !Sub "aws s3 cp s3://${S3Bucket}/${MajorRelease}/${MinorRelease}/${BuildNumber}/${App}/${EnvType}/filebeat.yml /etc/filebeat/ --region ${AWS::Region} && sleep 5 && service filebeat restart"
+              cwd: "~"
+              ignoreErrors: "false"               
+            09_change_ownership_permissions:
+              command: !Sub "chown -R ${AppUser}:${AppUser} ${MountPoint} && chmod 0755 -R ${MountPoint} && chmod -R 0777 ../Shell_Script/"
+              cwd: !Sub "${JBossHome}"
+              ignoreErrors: "false"              
+            10_run_jboss_with_app_user:
+              command: "systemctl start jboss-start.service"
+              cwd: "/etc/systemd/system"
+              ignoreErrors: "false"           
+    # Properties for LaunchConfiguration and Instance to be created from LaunchConfiguration
+    Properties:
+      ImageId: !Ref AMI
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      IamInstanceProfile: !Ref InstanceProfile
+      InstanceMonitoring: 'true'
+      AssociatePublicIpAddress: 'false'
+      SecurityGroups:
+        - !Ref sg
+      BlockDeviceMappings: 
+        - DeviceName: "/dev/sda1"
+          Ebs: 
+            VolumeSize: !Ref RootVolumeSize
+            VolumeType: "gp2"
+            Encrypted: "true"
+            #KmsKeyId: !Ref EC2KmsKeyId
+        - DeviceName: "/dev/sdb"
+          Ebs: 
+            VolumeSize: !Ref SecondaryVolumeSize
+            VolumeType: "gp2"
+            Encrypted: "true"
+            #KmsKeyId: !Ref EC2KmsKeyId
+      # User Data commands to be run during Initialization of Server
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash -xe
+            apt-get update
+            sleep 10
+            apt-get -y install python-setuptools            
+            mkdir aws-cfn-bootstrap-latest
+            curl https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz | tar xz -C aws-cfn-bootstrap-latest --strip-components 1
+            easy_install aws-cfn-bootstrap-latest
+            ln -s /root/aws-cfn-bootstrap-latest/init/ubuntu/cfn-hup /etc/init.d/cfn-hup
+            /usr/local/bin/cfn-init -v --stack ${AWS::StackName} --resource launchconfig --configsets DownloadPackages --region ${AWS::Region}
+            /usr/local/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource asgroup --region ${AWS::Region}
+      
+  # ASG code for handling Classic Load Balancer properties
+  asgroup:
+    Type: 'AWS::AutoScaling::AutoScalingGroup'
+    Properties:
+      Cooldown: '300'
+      DesiredCapacity: !Ref DesiredCapacity
+      HealthCheckGracePeriod: '300'
+      HealthCheckType: EC2
+      MaxSize: '10'
+      MinSize: '1'
+      VPCZoneIdentifier:
+        # Fetch EC2Subnet1 and EC2Subnet2 values
+        # Based on the condition defined as per Environment selected
+        - !If [GetValNetworkValues, !ImportValue subnet33b0A, !If [GetProdNetworkValues, !ImportValue subnet34b0A, !If [GetDevNetworkValues, !ImportValue subnet33b1A, !If [GetMLNetworkValues, !ImportValue subnet34b1A, !If [GetPTNetworkValues, !ImportValue subnet33b4A, !If [GetUTNetworkValues, !ImportValue subnet33b3A, !If [GetSITNetworkValues, !ImportValue subnet33b2A, !If [GetProdNetworkValuesSecondary,!ImportValue subnet34b0B, !If [GetValNetworkValuesSecondary, !ImportValue subnet33b0B, ""]]]]]]]]]
+        - !If [GetValNetworkValues, !ImportValue subnet37b0A, !If [GetProdNetworkValues, !ImportValue subnet38b0A, !If [GetDevNetworkValues, !ImportValue subnet37b1A, !If [GetMLNetworkValues, !ImportValue subnet38b1A, !If [GetPTNetworkValues, !ImportValue subnet35b4A, !If [GetUTNetworkValues, !ImportValue subnet35b3A, !If [GetSITNetworkValues, !ImportValue subnet35b2A, !If [GetProdNetworkValuesSecondary,!ImportValue subnet38b0B, !If [GetValNetworkValuesSecondary, !ImportValue subnet37b0B, ""]]]]]]]]]
+      LaunchConfigurationName: !Ref launchconfig
+      LoadBalancerNames:
+        - !Ref ClassicLoadBalancer
+      # Adding tags to identify the ASG resource
+      # Same tags will be applicable to the instance launched
+      Tags:
+        - Key: Name
+          Value: !Sub ${Prefix}-${EnvType}-${App}
+          PropagateAtLaunch: true
+        - Key: Project
+          Value: rage
+          PropagateAtLaunch: true
+        - Key: Environment
+          Value: !Ref EnvType
+          PropagateAtLaunch: true
+      TerminationPolicies:
+        - Default
+    DependsOn:
+        - ClassicLoadBalancer        
+    #Creation policy for resource creation and deployment
+    CreationPolicy:
+      AutoScalingCreationPolicy:
+        MinSuccessfulInstancesPercent: 100
+      ResourceSignal:
+        Count: '1'
+        Timeout: PT10M
+    #Update policy for deploying new version
+    UpdatePolicy:
+      AutoScalingScheduledAction:
+        IgnoreUnmodifiedGroupSizeProperties: 'true'
+      AutoScalingRollingUpdate:
+        MinInstancesInService: '1'
+        MaxBatchSize: '2'
+        PauseTime: PT4M
+        WaitOnResourceSignals: 'true'
+        
+  # Classic LoadBalancer for Rage Framework Server
+  ClassicLoadBalancer:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      LoadBalancerName: !Sub ${Prefix}-${EnvType}-${App}-elb
+      Scheme: internal
+      SecurityGroups: 
+        - !Ref sg
+      # fetch ELB Subnet1 and ELB Subnet2 values
+      # same subnet as for ec2 instance
+      Subnets:
+        - !If [GetValNetworkValues, !ImportValue subnet33b0A, !If [GetProdNetworkValues, !ImportValue subnet34b0A, !If [GetDevNetworkValues, !ImportValue subnet33b1A, !If [GetMLNetworkValues, !ImportValue subnet34b1A, !If [GetPTNetworkValues, !ImportValue subnet33b4A, !If [GetUTNetworkValues, !ImportValue subnet33b3A, !If [GetSITNetworkValues, !ImportValue subnet33b2A, !If [GetProdNetworkValuesSecondary,!ImportValue subnet34b0B, !If [GetValNetworkValuesSecondary, !ImportValue subnet33b0B, ""]]]]]]]]]
+        - !If [GetValNetworkValues, !ImportValue subnet37b0A, !If [GetProdNetworkValues, !ImportValue subnet38b0A, !If [GetDevNetworkValues, !ImportValue subnet37b1A, !If [GetMLNetworkValues, !ImportValue subnet38b1A, !If [GetPTNetworkValues, !ImportValue subnet35b4A, !If [GetUTNetworkValues, !ImportValue subnet35b3A, !If [GetSITNetworkValues, !ImportValue subnet35b2A, !If [GetProdNetworkValuesSecondary,!ImportValue subnet38b0B, !If [GetValNetworkValuesSecondary, !ImportValue subnet37b0B, ""]]]]]]]]]
+      Tags:
+        - Key: Name
+          Value: !Sub ${Prefix}-${EnvType}-${App}
+        - Key: Project
+          Value: rage
+        - Key: Environment
+          Value: !Ref EnvType
+      Listeners:
+      - LoadBalancerPort: !Ref AppPort
+        InstancePort:
+          Ref: AppPort
+        Protocol: HTTP
+      HealthCheck:
+        Target:
+          Fn::Join:
+          - ''
+          - - 'HTTP:'
+            - Ref: AppPort
+            - "/"
+        HealthyThreshold: '3'
+        UnhealthyThreshold: '2'
+        Interval: '30'
+        Timeout: '5'
+  # Creating alarm to identify any unhealthy host under Rage Framework Classic LoadBalancer
+  UnhealthyHostAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+         AlarmName: !Sub ${Prefix}-${EnvType}-${App}-alarm
+         AlarmDescription: Unhealthy host under rage ELB
+         Namespace: AWS/ELB
+         Dimensions:
+          - Name: Per-LB Metrics
+            Value: !Sub ${Prefix}-${EnvType}-${App}-elb
+         MetricName: UnHealthyHostCount
+         ComparisonOperator: GreaterThanThreshold
+         Statistic: Minimum
+         Period: 60
+         EvaluationPeriods: 1
+         Threshold: 0
+  # Creating DNS record for the NLB for specific Application
+  DNSRecord:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName: !Ref HostedZoneResource
+      Comment: Zone apex alias targeted to Elastic LoadBalancer.
+      RecordSets:
+      - Name: !Sub "${Prefix}-${EnvType}-${App}-elb.${HostedZoneResource}"
+        Type: A
+        AliasTarget:
+          HostedZoneId: !GetAtt ClassicLoadBalancer.CanonicalHostedZoneNameID
+          DNSName: !GetAtt ClassicLoadBalancer.DNSName

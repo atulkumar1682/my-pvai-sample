@@ -1,0 +1,317 @@
+---
+# -------------------------------------------------------------------------------------------------
+#
+#     Copyright © Genpact 2018. All Rights Reserved.
+#     Ltd trading as G in NYSE - Registered in US.
+#     Registered Office - Canon's Court, 22 Victoria Street HAMILTON, HM 12, Bermuda.
+#
+# -------------------------------------------------------------------------------------------------
+## author = 'Sandeep Kumar (Genpact Limited)'
+## ver = '1.0.0'
+## date = 29-Oct-2018
+## Ref: https://aws.amazon.com/blogs/networking-and-content-delivery/using-static-ip-addresses-for-application-load-balancers/
+# -------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------
+## modified_by = 'Sandeep Kumar (Genpact Limited)'
+## ver = '1.1.0'
+## changes = "Lambda Role to be created as per condition"
+## date = 17-Mar-2019
+# -------------------------------------------------------------------------------------------------
+Transform: AWS::Serverless-2016-10-31
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Register Load Balancer as IP target for Network Load Balancer
+Parameters:
+  Prefix:
+      Description: Prefix Value
+      Default: pvai
+      Type: String
+  EnvType:
+      Description: Environment name
+      Type: String
+      Default: dev
+      AllowedValues: ["dev", "pt", "ml", "val", "prod", "sit", "ut"]
+  InternalELBDNSName:
+    Type: String
+    Default: 'internal-pvai-dev-rep-alb-1504380082.Primary.elb.amazonaws.com'
+    Description: Enter the DNS name of your internal Elastic Load Balancer name.
+      e.g.application-load-balancer.elb.Primary.amazonaws.com
+  LBDeregistrationDelay:
+       Description: Wait time (in sec) for changing the state of a deregistering target
+       Type: Number
+       Default: 30
+       ConstraintDescription: 'Must be in the range [0-600]'
+       MinValue: 0
+       MaxValue: 600
+  S3BucketName:
+    Type: String
+    Default: 'pvai-pfizer-deployment'
+    Description: Enter the S3 Bucket name that you want to store Elastic Load
+      Balancer's node IP addresses
+  ELBListenerPort:
+    Type: String
+    Default: '443'
+    Description: Enter the traffic listener port of your internal Elastic Load
+      Balancer
+  MAXDNSLookupPerInvocation:
+    Type: Number
+    Default: 50
+    Description: Please specify the max DNS lookup this function can perform per invocation
+  InvocationBeforeDeregistration:
+    Type: Number
+    Default: 3
+    Description: Please specify how many invocations are needed before a IP is deregistered
+  CWMetricFlagIPCount:
+    Type: String
+    Default: 'True'
+    AllowedValues:
+    - 'True'
+    - 'False'
+    Description: Please specify if you want the Lambda function to create a CloudWatch
+      metric to track IP count of your internal Elastic Load Balancer
+  Region:
+    Type: String
+    Default: Primary
+    AllowedValues:
+    - Primary
+    - Secondary
+    Description: Please specify the region where you want to create your Lambda function
+  App:
+      Description: application for which NLB etc are being created
+      Default: core
+      AllowedValues:
+      - 'core'
+      - 'report'
+      Type: String
+  RoleFlag:
+      Description: For condition to validate if new role is required or not; if yes, then role is created
+      Type: String
+      Default: false
+      AllowedValues: ["false", "true"]
+# Lambda function assigned role
+# which will have access on CloudWatch logs, S3 Bucket and ELB
+  ExecutionRole:
+      Description: Role for Lambda function
+      Default: lambda-nlb-to-elb-as-target
+      Type: String     
+Mappings:
+  RegionMap:
+    Secondary:
+      Bucket: pvai-devops-lambda-functions-dr
+      Key: populate_NLB_TG_with_ELB.zip
+    Primary:
+      Bucket: pvai-devops-lambda-functions
+      Key: populate_NLB_TG_with_ELB.zip
+Conditions:
+  # Create condition based on the Environment and Region selected;
+  # To fetch the VPC and Subnet values based on the condition
+  GetDevNetworkValues: !And
+       - !Equals [ !Ref EnvType, "dev" ]
+       - !Equals [ !Ref Region, Primary ]
+  GetMLNetworkValues: !And
+       - !Equals [ !Ref EnvType, "ml"]
+       - !Equals [ !Ref Region, Primary ]
+  GetPTNetworkValues: !And
+       - !Equals [ !Ref EnvType, "pt"]
+       - !Equals [ !Ref Region, Primary ]
+  GetUTNetworkValues: !And
+       - !Equals [ !Ref EnvType, "ut"]
+       - !Equals [ !Ref Region, Primary ]
+  GetSITNetworkValues: !And
+       - !Equals [ !Ref EnvType, "sit"]
+       - !Equals [ !Ref Region, Primary ]
+  GetValNetworkValues: !And
+       - !Equals [ !Ref EnvType, "val"]
+       - !Equals [ !Ref Region, Primary ]
+  GetProdNetworkValues: !And
+       - !Equals [ !Ref EnvType, "prod"]
+       - !Equals [ !Ref Region, Primary ]
+  GetProdNetworkValuesSecondary: !And
+       - !Equals [ !Ref EnvType, "prod"]
+       - !Equals [ !Ref Region, Secondary ]
+  GetValNetworkValuesSecondary: !And
+       - !Equals [ !Ref EnvType, "val"]
+       - !Equals [ !Ref Region, Secondary ]
+  # Check if Role need to be created or not
+  # if not then just refer the role from the parameter
+  # otherwise create role after checking the condition
+  NewLambdaRoleRequired: !Equals [ !Ref RoleFlag, "true" ]
+  NewLambdaRoleNotRequired: !Not [!Equals [ !Ref RoleFlag, "true" ]]
+Resources:
+  # A target group. This is used for keeping track of all the tasks, and
+  # what IP addresses / port numbers they have. You can query it yourself,
+  # to use the addresses yourself, but most often this target group is just
+  # connected to an application load balancer, or network load balancer, so
+  # it can automatically distribute traffic across all the targets.
+  NLBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 10
+      HealthCheckProtocol: TCP
+      HealthyThresholdCount: 3
+      UnhealthyThresholdCount: 3
+      TargetType: ip
+      Name: !Sub "${Prefix}-${EnvType}-${App}-proxy-tg"
+      Port: !Ref 'ELBListenerPort'
+      Protocol: TCP
+      # Adding tags to identify and categorize the resources
+      Tags:
+        - Key: Name
+          Value: !Sub ${Prefix}-${EnvType}-${App}-tg
+        - Key: Project
+          Value: !Ref App
+        - Key: Environment
+          Value: !Ref EnvType
+      VpcId: !If [GetValNetworkValues, !ImportValue vpc20A, !If [GetProdNetworkValues, !ImportValue vpc20A, !If [GetDevNetworkValues, !ImportValue vpc21A, !If [GetMLNetworkValues, !ImportValue vpc21A, !If [GetPTNetworkValues, !ImportValue vpc24A, !If [GetUTNetworkValues, !ImportValue vpc23A, !If [GetSITNetworkValues, !ImportValue vpc22A, !If [GetProdNetworkValuesSecondary,!ImportValue vpc20B, !If [GetValNetworkValuesSecondary, !ImportValue vpc20B, ""]]]]]]]]]
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: !Ref LBDeregistrationDelay
+  # Create Listener for Network LoadBalancer
+  NetworkLoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref 'NLBTargetGroup'
+      LoadBalancerArn: !Ref 'NetworkLoadBalancer'
+      Port: !Ref ELBListenerPort
+      Protocol: TCP
+
+  # Network LoadBalancer for ECS service
+  NetworkLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: network
+      Scheme: "internal"
+      Name: !Sub "${Prefix}-${EnvType}-${App}-proxy-nlb"
+      LoadBalancerAttributes:
+        - Key: deletion_protection.enabled
+          Value: 'true'
+        - Key: load_balancing.cross_zone.enabled
+          Value: 'true'
+        # This load balancer is in the private subnets
+      Subnets:
+        - !If [GetValNetworkValues, !ImportValue subnet23b0A, !If [GetProdNetworkValues, !ImportValue subnet24b0A, !If [GetDevNetworkValues, !ImportValue subnet23b1A, !If [GetMLNetworkValues, !ImportValue subnet24b1A, !If [GetPTNetworkValues, !ImportValue subnet23b4A, !If [GetUTNetworkValues, !ImportValue subnet23b3A, !If [GetSITNetworkValues, !ImportValue subnet23b2A, !If [GetProdNetworkValuesSecondary,!ImportValue subnet24b0B, !If [GetValNetworkValuesSecondary, !ImportValue subnet23b0B, ""]]]]]]]]]
+        - !If [GetValNetworkValues, !ImportValue subnet25b0A, !If [GetProdNetworkValues, !ImportValue subnet26b0A, !If [GetDevNetworkValues, !ImportValue subnet25b1A, !If [GetMLNetworkValues, !ImportValue subnet26b1A, !If [GetPTNetworkValues, !ImportValue subnet24b4A, !If [GetUTNetworkValues, !ImportValue subnet24b3A, !If [GetSITNetworkValues, !ImportValue subnet24b2A, !If [GetProdNetworkValuesSecondary,!ImportValue subnet26b0B, !If [GetValNetworkValuesSecondary, !ImportValue subnet25b0B, ""]]]]]]]]]
+      Tags:
+        - Key: Name
+          Value: !Sub "${Prefix}-${EnvType}-${App}-nlb"
+        - Key: Project
+          Value: !Ref App
+        - Key: Environment
+          Value: !Ref EnvType
+# Lambda Function for registering Targets under NLB
+  LambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri:
+        Bucket:
+          Fn::FindInMap:
+          - RegionMap
+          - Ref: Region
+          - Bucket
+        Key:
+          Fn::FindInMap:
+          - RegionMap
+          - Ref: Region
+          - Key
+      Description: Register Elastic Load Balancer to Network Load Balancer
+      Handler: populate_NLB_TG_with_ELB.lambda_handler
+      Timeout: 300
+      Role:
+        Fn::Join:
+        - ''
+        - - Fn::If:
+            - NewLambdaRoleNotRequired
+            - !Sub "arn:aws:iam::${AWS::AccountId}:role/${ExecutionRole}"
+            - Fn::GetAtt: LambdaIAMRole.Arn
+      Runtime: python2.7
+      Environment:
+        Variables:
+          ELB_DNS_NAME:
+            Ref: InternalELBDNSName
+          NLB_TG_ARN:
+            Ref: 'NLBTargetGroup'
+          S3_BUCKET:
+            Ref: S3BucketName
+          MAX_LOOKUP_PER_INVOCATION:
+            Ref: MAXDNSLookupPerInvocation
+          INVOCATIONS_BEFORE_DEREGISTRATION:
+            Ref: InvocationBeforeDeregistration
+          CW_METRIC_FLAG_IP_COUNT:
+            Ref: CWMetricFlagIPCount
+          ELB_LISTENER:
+            Ref: ELBListenerPort
+  ScheduledRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: ScheduledRule
+      ScheduleExpression: rate(1 minute)
+      State: ENABLED
+      Targets:
+      - Arn:
+          Fn::GetAtt:
+          - LambdaFunction
+          - Arn
+        Id: TargetFunctionV1
+    DependsOn:
+    - LambdaFunction
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Fn::GetAtt:
+        - LambdaFunction
+        - Arn
+      Principal: events.amazonaws.com
+      Action: lambda:InvokeFunction
+      SourceArn:
+        Fn::GetAtt:
+        - ScheduledRule
+        - Arn
+  LambdaIAMRole:
+    Type: AWS::IAM::Role
+    Condition: NewLambdaRoleRequired
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Path: "/"
+      RoleName: "lambda-nlb-to-elb-as-target"
+      Policies:
+      - PolicyName: Lambda-ELBasTarget
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Sid: LambdaLogging
+            Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource:
+            - arn:aws:logs:*:*:*
+          - Sid: S3
+            Action:
+            - s3:Get*
+            - s3:PutObject
+            - s3:CreateBucket
+            - s3:ListBucket
+            - s3:ListAllMyBuckets
+            Effect: Allow
+            Resource: "*"
+          - Sid: ELB
+            Action:
+            - elasticloadbalancing:Describe*
+            - elasticloadbalancing:RegisterTargets
+            - elasticloadbalancing:DeregisterTargets
+            Effect: Allow
+            Resource: "*"
+          - Sid: CW
+            Action:
+            - cloudwatch:putMetricData
+            Effect: Allow
+            Resource: "*"

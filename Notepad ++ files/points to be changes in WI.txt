@@ -1,0 +1,21 @@
+Note: page created on confluence under pvai pt for changes that needs to be made
+
+It is not mentioned to launch a new instance or to run a instance which is already running for set up the RDS schema under section 4.11 
+On Prerequisites section 4.12 
+Not mentioned to encrypt the S3 bucket for Ireland region under section 4.15. Even the s3 bucket as well created at the time of cloudtrail.
+RDS endpoint should be updated in Route 53 and its not mentioned under WI.
+Under Section 4.20 : Not mentioned to run the command on windows machine or linux As per the screenshot, its showing through linux but till the time no server had launched.
+VPC should be added under hosted zone before initiating the rge server initialization.
+Under Prerequisites of Rge server, instead of putting the DB endpoint entry, should be fill the alias(CNAME) created under hosted zone.
+Under Section 4.21 : Need to create the bucket replicatioin policy but not mentioned which buckets will fall under the replication policy.
+
+* Amazon macie roles are not showing up under the IAM roles also not the cloudformation templates found. 
+
+Under application deployment, image ( username and password is mentioned )
+
+rge schema set up : 
+while running RAGE_ACCOUNT_SETUP.sql  it ask to put the value 2 times but its not mentioned under the documents.
+
+Under Application Deployment : while creating record set , we need to make changes under route 53 but not mentioned that we need to create the elb manually or it will create automatically with the script.
+
+

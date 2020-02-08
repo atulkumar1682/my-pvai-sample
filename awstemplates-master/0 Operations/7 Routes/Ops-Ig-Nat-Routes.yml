@@ -1,0 +1,77 @@
+#------------------------------------------------------------------------------------#
+## Copyright © Genpact 2018. All Rights Reserved.                                   ##
+## Ltd trading as G in NYSE - Registered in US.                                     ##
+## Registered Office - Canon's Court, 22 Victoria Street HAMILTON, HM 12, Bermuda.  ##
+#------------------------------------------------------------------------------------#
+## Author = 'Vivek Trivedi (Genpact Limited)'                                       ##
+## Version = '1.0.0'                                                                ##
+## Date = 6-Apr-2018                                                                ##
+#------------------------------------------------------------------------------------#
+AWSTemplateFormatVersion: 2010-09-09
+Description: Operations Internet Gateway and NatGateway Routes.
+Parameters:
+    Region: 
+        Description: AWS Region
+        Default: N-Virginia(us-east-1)
+        Type: String
+        AllowedValues: 
+           - N-Virginia(us-east-1)
+           - Ireland(eu-west-1)
+        ConstraintDescription: Select the Region for creation.
+Conditions: 
+  CreateCondition-A: !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition-B: !Equals [ !Ref Region, Ireland(eu-west-1) ]
+Resources:
+  routevpc1igA:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition-A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc1rt1aA
+      GatewayId: !ImportValue vpc1igA
+  routevpc1igB:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition-B
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc1rt1aB
+      GatewayId: !ImportValue vpc1igB
+  routenatgatewayvpcAx:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition-A
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc1rt2bA 
+      NatGatewayId: !ImportValue natgatewayvpcAx
+  routenatgatewayvpcBx:
+    Type: 'AWS::EC2::Route'
+    Condition: CreateCondition-B
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !ImportValue vpc1rt2bB 
+      NatGatewayId: !ImportValue natgatewayvpcBx
+Outputs: 
+  routevpc1igA:
+    Description: Route for Internet Gateway VPC-1 Operations in Virginia
+    Condition: CreateCondition-A
+    Value: !Ref routevpc1igA
+    Export:
+      Name: routevpc1igA
+  routevpc1igB:
+    Description: Route for Internet Gateway VPC-1 Operations in Ireland
+    Condition: CreateCondition-B
+    Value: !Ref routevpc1igB
+    Export:
+      Name: routevpc1igB
+  routenatgatewayvpcAx:
+    Description: Route for NAT Gateway VPC-1 Operations in Virginia
+    Condition: CreateCondition-A
+    Value: !Ref routenatgatewayvpcAx
+    Export:
+      Name: routenatgatewayvpcAx
+  routenatgatewayvpcBx:
+    Description: Route for NAT Gateway VPC-1 Operations in Ireland
+    Condition: CreateCondition-B
+    Value: !Ref routenatgatewayvpcBx
+    Export:
+      Name: routenatgatewayvpcBx

@@ -1,0 +1,460 @@
+#------------------------------------------------------------------------------------#
+## Copyright © Genpact 2018. All Rights Reserved.                                   ##
+## Ltd trading as G in NYSE - Registered in US.                                     ##
+## Registered Office - Canon's Court, 22 Victoria Street HAMILTON, HM 12, Bermuda.  ##
+#------------------------------------------------------------------------------------#
+## Author = 'Vivek Trivedi (Genpact Limited)'                                       ##
+## Version = '1.0.0'                                                                ##
+## Date = 6-Apr-2018                                                                ##
+#------------------------------------------------------------------------------------#
+AWSTemplateFormatVersion: 2010-09-09
+Description: CoreVPC - Public Subnets For All Regions
+Parameters:
+    Region: 
+        Description: AWS Region
+        Default: N-Virginia(us-east-1)
+        Type: String
+        AllowedValues: 
+           - N-Virginia(us-east-1)
+           - Ireland(eu-west-1)
+        ConstraintDescription: Select the Region for creation.
+    EnvType: 
+        Description: Environment Type
+        Default: DEV/ML
+        Type: String
+        AllowedValues: 
+           - DEV/ML
+           - SIT
+           - VAL/PROD
+           - UserTraining
+           - PerformanceTesting
+        ConstraintDescription: Select the Environment for Creation.
+Conditions: 
+  CreateCondition1A: !And
+        - !Equals [ !Ref EnvType, DEV/ML ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition2A: !And
+        - !Equals [ !Ref EnvType, SIT ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition0A: !And
+        - !Equals [ !Ref EnvType, VAL/PROD ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition0B: !And
+        - !Equals [ !Ref Region, Ireland(eu-west-1) ]
+        - !Equals [ !Ref EnvType, VAL/PROD ]
+  CreateCondition3A: !And
+        - !Equals [ !Ref EnvType, UserTraining ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition4A: !And
+        - !Equals [ !Ref EnvType, PerformanceTesting ]
+        - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+Resources:
+  subnet21a1A:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition1A
+    Properties:
+      CidrBlock: 10.10.0.0/24
+      AvailabilityZone: us-east-1b
+      VpcId: !ImportValue vpc21A
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-21a-1A
+  subnet22a1A:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition1A
+    Properties:
+      CidrBlock: 10.10.6.0/24
+      AvailabilityZone: us-east-1c
+      VpcId: !ImportValue vpc21A
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-22a-1A
+  subnet21a2A:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition2A
+    Properties:
+      CidrBlock: 10.50.0.0/24
+      AvailabilityZone: us-east-1b
+      VpcId: !ImportValue vpc22A
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-21a-2A
+  subnet22a2A:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition2A
+    Properties:
+      CidrBlock: 10.50.4.0/24
+      AvailabilityZone: us-east-1c
+      VpcId: !ImportValue vpc22A
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-22a-2A
+  subnet21a0A:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition0A
+    Properties:
+      CidrBlock: 10.20.0.0/24
+      AvailabilityZone: us-east-1b
+      VpcId: !ImportValue vpc20A
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-21a-0A
+  subnet22a0A:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition0A
+    Properties:
+      CidrBlock: 10.20.6.0/24
+      AvailabilityZone: us-east-1c
+      VpcId: !ImportValue vpc20A
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-22a-0A
+  subnet21a0B:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition0B
+    Properties:
+      CidrBlock: 10.21.0.0/24
+      AvailabilityZone: eu-west-1b
+      VpcId: !ImportValue vpc20B
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-21a-0B
+  subnet22a0B:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition0B
+    Properties:
+      CidrBlock: 10.21.6.0/24
+      AvailabilityZone: eu-west-1c
+      VpcId: !ImportValue vpc20B
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-22a-0B        
+  subnet21a3A:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition3A
+    Properties:
+      CidrBlock: 10.30.0.0/24
+      AvailabilityZone: us-east-1b
+      VpcId: !ImportValue vpc23A
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-21a-3A
+  subnet22a3A:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition3A
+    Properties:
+      CidrBlock: 10.30.4.0/24
+      AvailabilityZone: us-east-1c
+      VpcId: !ImportValue vpc23A
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-22a-3A
+  subnet21a4A:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition4A
+    Properties:
+      CidrBlock: 10.60.0.0/24
+      AvailabilityZone: us-east-1b
+      VpcId: !ImportValue vpc24A
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-21a-4A
+  subnet22a4A:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition4A
+    Properties:
+      CidrBlock: 10.60.4.0/24
+      AvailabilityZone: us-east-1c
+      VpcId: !ImportValue vpc24A
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-22a-4A
+  subnet31a1A:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition1A
+    Properties:
+      CidrBlock: 10.12.0.0/24
+      AvailabilityZone: us-east-1b
+      VpcId: !ImportValue vpc31A
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-31a-1A
+  subnet32a1A:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition1A
+    Properties:
+      CidrBlock: 10.12.10.0/24
+      AvailabilityZone: us-east-1c
+      VpcId: !ImportValue vpc31A
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-32a-1A
+  subnet31a2A:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition2A
+    Properties:
+      CidrBlock: 10.52.0.0/24
+      AvailabilityZone: us-east-1b
+      VpcId: !ImportValue vpc32A
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-31a-2A
+  subnet32a2A:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition2A
+    Properties:
+      CidrBlock: 10.52.6.0/24
+      AvailabilityZone: us-east-1c
+      VpcId: !ImportValue vpc32A
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-32a-2A
+  subnet31a0A:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition0A
+    Properties:
+      CidrBlock: 10.22.0.0/24
+      AvailabilityZone: us-east-1b
+      VpcId: !ImportValue vpc30A
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-31a-0A
+  subnet32a0A:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition0A
+    Properties:
+      CidrBlock: 10.22.10.0/24
+      AvailabilityZone: us-east-1c
+      VpcId: !ImportValue vpc30A
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-32a-0A
+  subnet31a0B:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition0B
+    Properties:
+      CidrBlock: 10.23.0.0/24
+      AvailabilityZone: eu-west-1b
+      VpcId: !ImportValue vpc30B
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-31a-0B
+  subnet32a0B:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition0B
+    Properties:
+      CidrBlock: 10.23.10.0/24
+      AvailabilityZone: eu-west-1c
+      VpcId: !ImportValue vpc30B
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-32a-0B        
+  subnet31a3A:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition3A
+    Properties:
+      CidrBlock: 10.32.0.0/24
+      AvailabilityZone: us-east-1b
+      VpcId: !ImportValue vpc33A
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-31a-3A
+  subnet32a3A:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition3A
+    Properties:
+      CidrBlock: 10.32.6.0/24
+      AvailabilityZone: us-east-1c
+      VpcId: !ImportValue vpc33A
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-32a-3A
+  subnet31a4A:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition4A
+    Properties:
+      CidrBlock: 10.62.0.0/24
+      AvailabilityZone: us-east-1b
+      VpcId: !ImportValue vpc34A
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-31a-4A
+  subnet32a4A:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition4A
+    Properties:
+      CidrBlock: 10.62.6.0/24
+      AvailabilityZone: us-east-1c
+      VpcId: !ImportValue vpc34A
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        - Key: Name
+          Value: subnet-32a-4A
+Outputs:
+  subnet21a1A:
+    Description: The value for VPC-2 Subnet-1 Public DEV/ML Environment for Virginia.
+    Condition: CreateCondition1A
+    Value: !Ref subnet21a1A 
+    Export:
+      Name: subnet21a1A          
+  subnet22a1A:
+    Description: The value for VPC-2 Subnet-2 Public DEV/ML Environment for Virginia
+    Condition: CreateCondition1A
+    Value: !Ref subnet22a1A
+    Export:
+      Name: subnet22a1A
+  subnet21a2A:
+    Description: The value for VPC-2 Subnet-1 Public SIT Environment for Virginia
+    Condition: CreateCondition2A
+    Value: !Ref subnet21a2A
+    Export:
+      Name: subnet21a2A
+  subnet22a2A:
+    Description: The value for VPC-2 Subnet-2 Public SIT Environment for Virginia
+    Condition: CreateCondition2A
+    Value: !Ref subnet22a2A
+    Export:
+      Name: subnet22a2A
+  subnet21a0A:
+    Description: The value for VPC-2 Subnet-1 Public PROD/VAL Environment for Virginia
+    Condition: CreateCondition0A
+    Value: !Ref subnet21a0A
+    Export:
+      Name: subnet21a0A
+  subnet22a0A:
+    Description: The value for VPC-2 Subnet-2 Public PROD/VAL Environment for Virginia
+    Condition: CreateCondition0A
+    Value: !Ref subnet22a0A
+    Export:
+      Name: subnet22a0A
+  subnet21a0B:
+    Description: The value for VPC-2 Subnet-1 Public PROD/VAL Environment for Ireland.
+    Condition: CreateCondition0B
+    Value: !Ref subnet21a0B
+    Export:
+      Name: subnet21a0B
+  subnet22a0B:
+    Description: The value for VPC-2 Subnet-2 Public PROD/VAL Environment for Ireland.
+    Condition: CreateCondition0B
+    Value: !Ref subnet22a0B
+    Export:
+      Name: subnet22a0B
+  subnet21a3A:
+    Description: The value for VPC-2 Subnet-1 Public UserTraining Environment for Virginia
+    Condition: CreateCondition3A
+    Value: !Ref subnet21a3A
+    Export:
+      Name: subnet21a3A  
+  subnet22a3A:
+    Description: The value for VPC-2 Subnet-2 Public UserTraining Environment for Virginia
+    Condition: CreateCondition3A
+    Value: !Ref subnet22a3A
+    Export:
+      Name: subnet22a3A	
+  subnet21a4A:
+    Description: The value for VPC-2 Subnet-1 Public PerformanceTesting Environment for Virginia
+    Condition: CreateCondition4A
+    Value: !Ref subnet21a4A
+    Export:
+      Name: subnet21a4A
+  subnet22a4A:
+    Description: The value for VPC-2 Subnet-2 Public PerformanceTesting Environment for Virginia
+    Condition: CreateCondition4A
+    Value: !Ref subnet22a4A
+    Export:
+      Name: subnet22a4A
+  subnet31a1A:
+    Description: The value for VPC-3 Subnet-1 Public DEV/ML Environment for Virginia.
+    Condition: CreateCondition1A
+    Value: !Ref subnet31a1A 
+    Export:
+      Name: subnet31a1A          
+  subnet32a1A:
+    Description: The value for VPC-3 Subnet-2 Public DEV/ML Environment for Virginia
+    Condition: CreateCondition1A
+    Value: !Ref subnet32a1A
+    Export:
+      Name: subnet32a1A
+  subnet31a2A:
+    Description: The value for VPC-3 Subnet-1 Public SIT Environment for Virginia
+    Condition: CreateCondition2A
+    Value: !Ref subnet31a2A
+    Export:
+      Name: subnet31a2A
+  subnet32a2A:
+    Description: The value for VPC-3 Subnet-2 Public SIT Environment for Virginia
+    Condition: CreateCondition2A
+    Value: !Ref subnet32a2A
+    Export:
+      Name: subnet32a2A
+  subnet31a0A:
+    Description: The value for VPC-3 Subnet-1 Public PROD/VAL Environment for Virginia
+    Condition: CreateCondition0A
+    Value: !Ref subnet31a0A
+    Export:
+      Name: subnet31a0A
+  subnet32a0A:
+    Description: The value for VPC-3 Subnet-2 Public PROD/VAL Environment for Virginia
+    Condition: CreateCondition0A
+    Value: !Ref subnet32a0A
+    Export:
+      Name: subnet32a0A
+  subnet31a0B:
+    Description: The value for VPC-3 Subnet-1 Public PROD/VAL Environment for Ireland.
+    Condition: CreateCondition0B
+    Value: !Ref subnet31a0B
+    Export:
+      Name: subnet31a0B
+  subnet32a0B:
+    Description: The value for VPC-3 Subnet-2 Public PROD/VAL Environment for Ireland.
+    Condition: CreateCondition0B
+    Value: !Ref subnet32a0B
+    Export:
+      Name: subnet32a0B
+  subnet31a3A:
+    Description: The value for VPC-3 Subnet-1 Public UserTraining Environment for Virginia
+    Condition: CreateCondition3A
+    Value: !Ref subnet31a3A
+    Export:
+      Name: subnet31a3A  
+  subnet32a3A:
+    Description: The value for VPC-3 Subnet-2 Public UserTraining Environment for Virginia
+    Condition: CreateCondition3A
+    Value: !Ref subnet32a3A
+    Export:
+      Name: subnet32a3A	
+  subnet31a4A:
+    Description: The value for VPC-3 Subnet-1 Public PerformanceTesting Environment for Virginia
+    Condition: CreateCondition4A
+    Value: !Ref subnet31a4A
+    Export:
+      Name: subnet31a4A
+  subnet32a4A:
+    Description: The value for VPC-3 Subnet-2 Public PerformanceTesting Environment for Virginia
+    Condition: CreateCondition4A
+    Value: !Ref subnet32a4A
+    Export:
+      Name: subnet32a4A

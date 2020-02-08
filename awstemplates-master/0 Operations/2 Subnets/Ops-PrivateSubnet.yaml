@@ -1,0 +1,89 @@
+#------------------------------------------------------------------------------------#
+## Copyright © Genpact 2018. All Rights Reserved.                                   ##
+## Ltd trading as G in NYSE - Registered in US.                                     ##
+## Registered Office - Canon's Court, 22 Victoria Street HAMILTON, HM 12, Bermuda.  ##
+#------------------------------------------------------------------------------------#
+## Author = 'Vivek Trivedi (Genpact Limited)'                                       ##
+## Version = '1.0.0'                                                                ##
+## Date = 6-Apr-2018                                                                ##
+#------------------------------------------------------------------------------------#
+AWSTemplateFormatVersion: 2010-09-09
+Description: Operations Private-Subnets
+Parameters:
+    Region: 
+        Description: AWS Region
+        Default: N-Virginia(us-east-1)
+        Type: String
+        AllowedValues: 
+           - N-Virginia(us-east-1)
+           - Ireland(eu-west-1)
+        ConstraintDescription: Select the Region for creation.
+Conditions: 
+  CreateCondition-A: !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+  CreateCondition-B: !Equals [ !Ref Region, Ireland(eu-west-1) ]
+Resources:
+  subnet13bA:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition-A
+    Properties:
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: us-east-1b
+      VpcId: !ImportValue vpc1A
+      Tags:
+        - Key: Name
+          Value: subnet-13b-A
+  subnet14bA:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition-A
+    Properties:
+      CidrBlock: 10.0.6.0/24
+      AvailabilityZone: us-east-1c
+      VpcId: !ImportValue vpc1A
+      Tags:
+        - Key: Name
+          Value: subnet-14b-A
+  subnet13bB:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition-B
+    Properties:
+      CidrBlock: 10.1.2.0/24
+      AvailabilityZone: eu-west-1b
+      VpcId: !ImportValue vpc1B
+      Tags:
+        - Key: Name
+          Value: subnet-13b-B
+  subnet14bB:
+    Type: 'AWS::EC2::Subnet'
+    Condition: CreateCondition-B
+    Properties:
+      CidrBlock: 10.1.6.0/24
+      AvailabilityZone: eu-west-1c
+      VpcId: !ImportValue vpc1B
+      Tags:
+        - Key: Name
+          Value: subnet-14b-B        
+Outputs:
+  subnet13bA:
+    Description: The Subnet-ID of the VPC1 Subnet3 PrivateSubnet in Virginia. 
+    Condition: CreateCondition-A
+    Value: !Ref subnet13bA
+    Export:
+      Name: subnet13bA
+  subnet14bA:
+    Description: The Subnet-ID of the VPC1 Subnet4 PrivateSubnet in Virginia. 
+    Condition: CreateCondition-A
+    Value: !Ref subnet14bA
+    Export:
+      Name: subnet14bA  
+  subnet13bB:
+    Description: The Subnet-ID of the VPC1 Subnet3 PrivateSubnet in Ireland. 
+    Condition: CreateCondition-B
+    Value: !Ref subnet13bB
+    Export:
+      Name: subnet13bB
+  subnet14bB:
+    Description: The Subnet-ID of the VPC1 Subnet4 PrivateSubnet in Ireland. 
+    Condition: CreateCondition-B
+    Value: !Ref subnet14bB
+    Export:
+      Name: subnet14bB

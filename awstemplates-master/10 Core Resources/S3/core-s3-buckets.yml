@@ -1,0 +1,251 @@
+﻿#------------------------------------------------------------------------------------#
+## Copyright © Genpact 2018. All Rights Reserved.                                   ##
+## Ltd trading as G in NYSE - Registered in US.                                     ##
+## Registered Office - Canon's Court, 22 Victoria Street HAMILTON, HM 12, Bermuda.  ##
+#------------------------------------------------------------------------------------#
+## Author = 'Pankaj Motwani  (Genpact Limited)'                                     ##
+## Version = '1.0.0'                                                                ##
+## Date = 6-Apr-2018                                                                ##
+#------------------------------------------------------------------------------------#
+#------------------------------------------------------------------------------------#
+## modified_by = 'Sandeep Kumar  (Genpact Limited)'                                 ##
+## version = '1.0.1'                                                                ##
+## date = 16-Apr-2019                                                               ## 
+## changes = lifecycle policy removed for data bucket                               ##
+#------------------------------------------------------------------------------------#
+AWSTemplateFormatVersion: 2010-09-09
+Description: CORE S3 - Data, Logs and Backup with Replication and LifeCycle Configuration.
+Parameters:
+    Region: 
+        Description: AWS Region
+        Default: N-Virginia(us-east-1)
+        Type: String
+        AllowedValues: 
+           - N-Virginia(us-east-1)
+           - Ireland(eu-west-1)
+    Prefix:
+        Description: Prefix for Bucket Name
+        Type: String
+        Default: verification
+    EnvType: 
+        Description: Environment Type
+        Default: dev
+        Type: String
+        AllowedValues: [dev, ml, sit, val, prod, ut, pt]
+        ConstraintDescription: Select the Environment for Creation.
+    ExpirationDays:
+        Description: Expiration in Days for S3 Objects
+        Type: String
+        Default: "60"
+    TransitionDays:
+        Description: Transition to Glacier in Days
+        Type: String
+        Default: "30"         
+Conditions: 
+   CreateBucketInValNVirginia: !And
+       - !Equals [ !Ref EnvType, "val" ]
+       - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+   CreateBucketInProdNVirginia: !And
+       - !Equals [ !Ref EnvType, "prod" ]
+       - !Equals [ !Ref Region, N-Virginia(us-east-1) ]
+   CreateBucketValProdNVirginia: !Or [ Condition: CreateBucketInValNVirginia, Condition: CreateBucketInProdNVirginia ]
+   CreateBucketNotValProd: !And
+       -  !Not [!Equals [!Ref EnvType, "val"]]
+       -  !Not [!Equals [!Ref EnvType, "prod"]]
+   CreateBucketValProd: !Or
+       -  !Equals [!Ref EnvType, "val"]
+       -  !Equals [!Ref EnvType, "prod"]
+   CreateBucketInIreland: !Equals [ !Ref Region, Ireland(eu-west-1) ] 
+   CreateBucketNotValProdOrIreland: !Or [ Condition: CreateBucketNotValProd, Condition: CreateBucketInIreland ]
+  
+Resources:
+  # create Backup Bucket for Val or Prod Environment
+  # in N. Virginia Region (Primary Region) Only
+  S3DataBucketValProd:
+    Type: 'AWS::S3::Bucket'
+    Condition: CreateBucketValProdNVirginia
+    Properties:
+      AccessControl: Private
+      BucketName: !Sub "pvai-${Prefix}-${EnvType}-primary-data"
+      LoggingConfiguration:
+        DestinationBucketName: !Ref S3LogsBucketValProd
+        LogFilePrefix: !Sub log${EnvType}
+      VersioningConfiguration:
+        Status: Enabled
+      ReplicationConfiguration:
+        Role: !Sub arn:aws:iam::${AWS::AccountId}:role/S3RoleForReplication
+        Rules:
+         - Id: MyRule1
+           Status: Enabled
+           Prefix: ""
+           Destination:
+             Bucket: !Sub arn:aws:s3:::pvai-${Prefix}-${EnvType}-secondary-data
+             StorageClass: STANDARD
+  # create Logs Bucket When Environment is neither Val nor Prod
+  S3LogsBucket:
+    Type: 'AWS::S3::Bucket'
+    Condition: CreateBucketNotValProdOrIreland
+    Properties:
+      AccessControl: LogDeliveryWrite
+      BucketName: !If [ CreateBucketInIreland, !Sub "pvai-${Prefix}-${EnvType}-secondary-logs", !Sub "pvai-${Prefix}-${EnvType}-primary-logs" ]
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+        - Id: Rule1
+          Prefix: ''
+          Status: Enabled
+          ExpirationInDays: !Ref ExpirationDays
+          Transitions:
+            - TransitionInDays: !Ref TransitionDays
+              StorageClass: Glacier
+  # create Logs Bucket for Val or Prod Environment
+  S3LogsBucketValProd:
+    Type: 'AWS::S3::Bucket'
+    Condition: CreateBucketValProdNVirginia
+    Properties:
+      AccessControl: LogDeliveryWrite
+      BucketName: !Sub "pvai-${Prefix}-${EnvType}-primary-logs"
+      VersioningConfiguration:
+        Status: Enabled
+      ReplicationConfiguration:
+        Role: !Sub arn:aws:iam::${AWS::AccountId}:role/S3RoleForReplication
+        Rules:
+         - Id: MyRule1
+           Status: Enabled
+           Prefix: ""
+           Destination:
+             Bucket: !Sub arn:aws:s3:::pvai-${Prefix}-${EnvType}-secondary-logs
+             StorageClass: STANDARD
+      LifecycleConfiguration:
+        Rules:
+        - Id: Rule1
+          Prefix: ''
+          Status: Enabled
+          ExpirationInDays: !Ref ExpirationDays
+          Transitions:
+            - TransitionInDays: !Ref TransitionDays
+              StorageClass: Glacier
+  # create Backup Bucket for Val or Prod Environment
+  # in N. Virginia Region (Primary Region) Only
+  S3BackUpBucketValProd:
+    Type: 'AWS::S3::Bucket'
+    Condition: CreateBucketValProdNVirginia
+    Properties:
+      AccessControl: Private
+      BucketName: !Sub "pvai-${Prefix}-${EnvType}-primary-backup"
+      LoggingConfiguration:
+        DestinationBucketName: !Ref S3LogsBucketValProd
+        LogFilePrefix: !Sub log${EnvType}
+      VersioningConfiguration:
+        Status: Enabled
+      ReplicationConfiguration:
+        Role: !Sub arn:aws:iam::${AWS::AccountId}:role/S3RoleForReplication
+        Rules:
+         - Id: MyRule1
+           Status: Enabled
+           Prefix: ""
+           Destination:
+             Bucket: !Sub arn:aws:s3:::pvai-${Prefix}-${EnvType}-secondary-backup
+             StorageClass: STANDARD
+      LifecycleConfiguration:
+        Rules:
+        - Id: Rule1
+          Prefix: ''
+          Status: Enabled
+          ExpirationInDays: !Ref ExpirationDays
+          Transitions:
+            - TransitionInDays: !Ref TransitionDays
+              StorageClass: Glacier
+  # create Data Bucket When Environment is neither Val nor Prod     
+  S3DataBucket:
+    Type: 'AWS::S3::Bucket'
+    Condition: CreateBucketNotValProdOrIreland
+    Properties:
+      AccessControl: Private
+      BucketName: !If [ CreateBucketInIreland, !Sub "pvai-${Prefix}-${EnvType}-secondary-data", !Sub "pvai-${Prefix}-${EnvType}-primary-data" ]
+      LoggingConfiguration:
+        DestinationBucketName: !Ref S3LogsBucket
+        LogFilePrefix: !Sub log${EnvType}
+      VersioningConfiguration:
+        Status: Enabled
+  # create Backup Bucket When Environment is neither Val nor Prod
+  S3BackUpBucket:
+    Type: 'AWS::S3::Bucket'
+    Condition: CreateBucketNotValProdOrIreland
+    Properties:
+      AccessControl: Private
+      BucketName: !If [ CreateBucketInIreland, !Sub "pvai-${Prefix}-${EnvType}-secondary-backup", !Sub "pvai-${Prefix}-${EnvType}-primary-backup" ]
+      LoggingConfiguration:
+        DestinationBucketName: !Ref S3LogsBucket
+        LogFilePrefix: !Sub log${EnvType}
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+        - Id: Rule1
+          Prefix: ''
+          Status: Enabled
+          ExpirationInDays: !Ref ExpirationDays
+          Transitions:
+            - TransitionInDays: !Ref TransitionDays
+              StorageClass: Glacier
+  # Create policy for S3 Bucket for logs
+  S3BucketAPIActivityPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Condition: CreateBucketValProdNVirginia
+    Properties:
+      Bucket: !Ref S3LogsBucketValProd
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          # Get Bucket ACL access for CloudTrail service
+          - Sid: AWSCloudTrailAclCheck20180329
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: 's3:GetBucketAcl'
+            Resource: !Join 
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref S3LogsBucketValProd
+          # Allow Write permission to cloudtrail service
+          - Sid: AWSCloudTrailPutPermission
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: 's3:PutObject'
+            Resource: !Join 
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref S3LogsBucketValProd
+                - /AWSLogs/
+                - !Ref AWS::AccountId
+                - /*
+            Condition:
+              StringEquals:
+                's3:x-amz-acl': bucket-owner-full-control
+          # Deny Delete permissions for all resources
+          - Sid: DenyDeleteAccess
+            Effect: Deny
+            Principal: "*"
+            Action: 
+            - s3:DeleteObject
+            Resource: !Join 
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref S3LogsBucketValProd
+                - '/*'
+          # Deny Delete permissions for root account as well
+          - Sid: DenyDeleteAccessForRoot
+            Effect: Deny
+            Principal:             
+               AWS:
+               - !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: 
+              - s3:DeleteObject
+            Resource: !Join 
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref S3LogsBucketValProd
+                - '/*'

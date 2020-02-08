@@ -1,0 +1,9 @@
+Need to make sure the auto-scalling role will be added to the encryption key.
+Made some changes in xce-deployment.sh script for secondary region.
+Need to check rds route53 entry.
+Need to remove all nlb entry from route53 for all services before deploying in DR region.
+Need to change the route53 entry for redis cluster.
+
+Switch to Primary:
+
+Need to make sure the route53 entry should be correct like rds, xce-services, spb-ELB, redis cluster

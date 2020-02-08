@@ -1,0 +1,92 @@
+#------------------------------------------------------------------------------------#
+## Copyright © Genpact 2018. All Rights Reserved.                                   ##
+## Ltd trading as G in NYSE - Registered in US.                                     ##
+## Registered Office - Canon's Court, 22 Victoria Street HAMILTON, HM 12, Bermuda.  ##
+#------------------------------------------------------------------------------------#
+## Author = 'Pankaj Motwani  (Genpact Limited)'                                     ##
+## Version = '1.0.0'                                                                ##
+## Date = 6-Apr-2018                                                                ##
+#------------------------------------------------------------------------------------#
+#------------------------------------------------------------------------------------#
+## modified_by = 'Sandeep Kumar  (Genpact Limited)'                                 ##
+## ver = '1.0.3'                                                                    ##
+## changes = "Environment specific dependencies removed and all resources           ##
+##           created at account level only"                                         ##
+## date = '27-Nov-2018'                                                              ##
+#------------------------------------------------------------------------------------#
+AWSTemplateFormatVersion: 2010-09-09
+Description: SNS Topics and Subscription
+Parameters:
+   # AWS Account Name to be entered
+    AWSAccount: 
+        Description: AWS Account for CloudTrail logs
+        Default: product
+        Type: String
+ # Email ID to which Notification will be sent
+ # Generally it will be Support Team group email id
+    EmailID:
+        Description: Email ID to be subscribed
+        Default: GenpactPVAISupport@genpact.com
+        Type: String
+    Region: 
+        Description: AWS Region
+        Default: "Primary"
+        Type: String
+        AllowedValues: 
+           - Primary
+           - Secondary
+   # Multi-Region enabled or not
+    MultiRegion: 
+        Description: Multi-Region Trail enabled or not
+        Default: "true"
+        Type: String
+        AllowedValues: 
+           - true
+           - false      
+Resources:
+# Create SNS topic with Display Name
+  SNS:
+     Type: "AWS::SNS::Topic"
+     Properties: 
+        DisplayName: !Sub ${AWSAccount}-NotificationGroup
+        TopicName: !Sub PVAITracking${AWSAccount}
+ # Subscribe it to some email id
+  Subscription:
+    Type: "AWS::SNS::Subscription"
+    Properties:
+        Endpoint: !Ref EmailID
+        Protocol: Email
+        TopicArn: !Ref SNS
+  TopicPolicy: 
+      Type: "AWS::SNS::TopicPolicy"
+      Properties: 
+        Topics: 
+          - Ref: SNS
+        PolicyDocument: 
+          Version: "2008-10-17"
+          Statement: 
+            - 
+              Sid: "AWSCloudTrailSNSPolicy"
+              Effect: "Allow"
+              Principal: 
+                Service: "cloudtrail.amazonaws.com"
+              Resource: "*"
+              Action: "SNS:Publish"
+  CloudTrail:
+    Type: 'AWS::CloudTrail::Trail'
+    Properties:
+      EnableLogFileValidation: true
+      IsMultiRegionTrail: !Ref MultiRegion
+      IncludeGlobalServiceEvents: true
+      IsLogging: true
+      S3BucketName:
+        Fn::ImportValue: "cloudtrail-s3-bucket"
+      SnsTopicName: !Ref SNS
+      TrailName: !Sub "CloudTrail-${AWSAccount}"
+# Export the SNS topic ARN to be used in other stacks
+Outputs:
+  SNS:
+    Description: SNS Topic ARN Export
+    Value: !Ref SNS
+    Export:
+      Name: !Sub PVAITracking${AWSAccount}

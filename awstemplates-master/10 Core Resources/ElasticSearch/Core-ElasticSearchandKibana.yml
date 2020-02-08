@@ -1,0 +1,106 @@
+#------------------------------------------------------------------------------------#
+##  Copyright © Genpact 2018. All Rights Reserved.                                  ##
+##  Ltd trading as G in NYSE - Registered in US.                                    ##
+##  Registered Office - Canon's Court, 22 Victoria Street HAMILTON, HM 12, Bermuda. ##
+#------------------------------------------------------------------------------------#
+## Author = 'Pankaj Motwani  (Genpact Limited)'                                     ##
+## Version = '1.0.0'                                                                ##
+## Date = 6-Apr-2018                                                                ##
+#------------------------------------------------------------------------------------#
+AWSTemplateFormatVersion: 2010-09-09
+Description: Core-Elastic Search Cluster Creation - Operations VPC
+#Define the parameters for the CF Stack
+Parameters:
+    Region: 
+        Description: AWS Region
+        Default: N-Virginia(us-east-1)
+        Type: String
+        AllowedValues: 
+           - N-Virginia(us-east-1)
+           - Ireland(eu-west-1)
+        ConstraintDescription: Select the Region for creation.
+    EnvType: 
+        Description: Environment Type
+        Default: dev
+        Type: String
+        AllowedValues: 
+           - dev
+           - ml
+           - sit
+           - val
+           - prod
+           - ut
+           - pt
+        ConstraintDescription: Select the Environment for Creation.
+# Instance Type for Elastic Search Cluster - can be selected as per requirement        
+    InstanceType:
+        Description: Instance Type
+        Default: m4.large
+        Type: String
+        AllowedValues: [ m4.large, m4.2xlarge ]
+# Instance Count for Elastic Search Cluster - can be selected as per requirement   
+    InstanceCount:
+        Description: Instance Count
+        Default: 2
+        Type: String
+        AllowedPattern: ^[0-9/]*$
+# Master Instance Count for Elastic Search Cluster - can be selected as per requirement   
+    MasterInstanceCount:
+        Description: Master Instance Count
+        Default: 2
+        Type: String
+        AllowedPattern: ^[0-9/]*$
+# EBS Volume Size for Elastic Search Cluster Instance - can be selected as per requirement   
+    VolumeSize:
+        Description: Volume Size
+        Default: 10
+        Type: String
+        AllowedPattern: ^[0-9/]*$
+# EBS Volume Type for Elastic Search Cluster Instance - can be selected as per requirement   
+    VolumeType:
+        Description: Volume Type
+        Default: gp2
+        Type: String
+        AllowedValues: [ gp2, io1, standard ]
+# EBS Volume IOPS for Elastic Search Cluster Instance - can be selected as per requirement   
+    VolumeIOPS:
+        Description: Volume IOPS Unit
+        Default: 100
+        Type: String
+        AllowedPattern: ^[0-9/]*$
+
+# define conditions for creating resources in different regions        
+Conditions:
+  CreateResourcesInNVirginia: !Equals [ !Ref Region, "N-Virginia(us-east-1)" ]
+  CreateResourcesInIreland: !Equals [ !Ref Region, "Ireland(eu-west-1)" ]
+  CreateIOVolume: !Equals [ !Ref VolumeType, "io1" ]
+
+
+Resources:
+  ElasticSearch:
+   Type: "AWS::Elasticsearch::Domain"
+   Properties:
+    DomainName: !Sub pvai-${EnvType}-logs
+    ElasticsearchVersion: 6.0
+    ElasticsearchClusterConfig: 
+      DedicatedMasterEnabled: "true"
+      InstanceCount: !Ref MasterInstanceCount
+      ZoneAwarenessEnabled: "true"
+      InstanceType: !Sub ${InstanceType}.elasticsearch
+      DedicatedMasterType: !Sub ${InstanceType}.elasticsearch
+      DedicatedMasterCount: !Ref MasterInstanceCount
+    EBSOptions: 
+      EBSEnabled: 'true'
+      Iops: !If [CreateIOVolume, !Ref VolumeIOPS, 0]
+      VolumeSize: !Ref VolumeSize
+      VolumeType: !Ref VolumeType
+    SnapshotOptions: 
+      AutomatedSnapshotStartHour: "0"
+    AdvancedOptions: 
+      rest.action.multi.allow_explicit_index: "true"
+    VPCOptions:
+        SecurityGroupIds: 
+          - !If [CreateResourcesInNVirginia, !ImportValue vpcsg1A, !If [CreateResourcesInIreland, !ImportValue vpcsg1B,""]]
+        SubnetIds:
+          - !If [CreateResourcesInNVirginia, !ImportValue subnet13bA, !If [CreateResourcesInIreland, !ImportValue subnet13bB,""]]
+          - !If [CreateResourcesInNVirginia, !ImportValue subnet14bA, !If [CreateResourcesInIreland, !ImportValue subnet14bB,""]]

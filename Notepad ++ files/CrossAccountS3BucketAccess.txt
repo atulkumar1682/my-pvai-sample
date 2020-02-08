@@ -1,0 +1,69 @@
+Attach the below policy on the role where we need to deploy.
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "s3:ListAllMyBuckets",
+            "Resource": "arn:aws:s3:::*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
+            ],
+            "Resource": "arn:aws:s3:::pvai-app-deployment"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject"
+            ],
+            "Resource": "arn:aws:s3:::pvai-app-deployment/*"
+        },
+		{
+            "Effect": "Allow",
+            "Action": [
+                "kms:Encrypt",
+                "kms:Decrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*",
+                "kms:DescribeKey"
+            ],
+            "Resource": "arn:aws:kms:*:681591231871:key/*"
+        }
+    ]
+}
+
+Attach the below policy on the bucket .
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "allow permissions",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "arn:aws:iam::681591231871:root",
+                    "arn:aws:iam::098194264563:root",
+                    "arn:aws:iam::138910935189:root",
+                    "arn:aws:iam::634741958955:root",
+                    "arn:aws:iam::903993026497:root"
+                ]
+            },
+            "Action": [
+                "s3:GetBucketLocation",
+                "s3:ListBucket",
+                "s3:GetObject",
+                "s3:Putobject"
+            ],
+            "Resource": [
+                "arn:aws:s3:::pvai-app-deployment",
+                "arn:aws:s3:::pvai-app-deployment/*"
+            ]
+        }
+    ]
+}

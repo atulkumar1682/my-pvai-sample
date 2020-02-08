@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+### BEGIN INIT INFO
+# Provides:          Bitbucket
+# Required-Start:
+# Required-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start Bitbucket daemon at boot time
+# Description:       Start Bitbucket daemon at boot time
+### END INIT INFO
+
+# THIS SCRIPT HAS BEEN CONFIGURED TO RUN AS PART OF RUN LEVELS 2 TO 5
+# IF YOU WISH TO CHANGE THIS CONFIGURATION YOU WILL HAVE TO DO IT MANUALLY
+
+PIDFILE=/opt/atlassian/application-data/bitbucket/log/bitbucket.pid
+
+start() {
+    /usr/local/atlassian/bitbucket/bin/start-bitbucket.sh --no-search
+}
+
+stop() {
+    /usr/local/atlassian/bitbucket/bin/stop-bitbucket.sh
+}
+
+status() {
+    if [ -f $PIDFILE ]; then
+        PID=$(<$PIDFILE)
+        if $(kill -0 "${PID:-}" 2> /dev/null); then
+            echo "Bitbucket is running"
+            exit 0
+        elif ps "${PID:-}" > /dev/null 2>&1; then
+            echo "Bitbucket is running"
+            exit 0
+        else
+            echo "Bitbucket is not running (pidfile exists)"
+            exit 1
+        fi
+    fi
+
+    echo "Bitbucket is not running"
+    exit 3
+}
+
+# Bitbucket Linux service controller script
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        status
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|status}"
+        exit 1
+        ;;
+esac
+

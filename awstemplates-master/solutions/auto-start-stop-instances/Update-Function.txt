@@ -1,6 +1,0 @@
-==============================================================
-
-$ aws lambda update-function-code --function-name product-stop-instances --s3-bucket pvai-devops-lambda-functions --s3-key stop-instances.zip --no-publish
-
-$ aws lambda update-function-code --function-name product-start-instances --s3-bucket pvai-devops-lambda-functions --s3-key start-instances.zip --no-publish
-============================================================
